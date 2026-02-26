@@ -59,8 +59,8 @@ export default function Navbar() {
       )}
       <nav className={`relative z-10 pointer-events-auto backdrop-blur-xl rounded-full pl-3 pr-3 sm:pl-5 sm:pr-5 md:pl-8 md:pr-8 h-[72px] sm:h-[76px] md:h-[84px] lg:h-[96px] w-[95%] max-w-7xl min-w-0 transition-all duration-300 flex items-center justify-between gap-1 sm:gap-2 md:gap-4 ${open ? 'overflow-visible' : 'overflow-hidden'} ${
         darkMode 
-          ? 'bg-primary-900/75 md:bg-primary-900/95 border border-white/20 shadow-lg shadow-black/20' 
-          : 'bg-white/80 sm:bg-white/90 border border-primary-200/60 sm:border-white/40 shadow-lg shadow-black/10'
+          ? 'bg-primary-900/60 md:bg-primary-900/80 border border-white/20 shadow-lg shadow-black/20' 
+          : 'bg-white/40 sm:bg-white/50 border border-primary-200/50 sm:border-white/30 shadow-lg shadow-black/10'
       }`}>
         
         {/* Left: Logo + Brand name  -  switch logo when navbar is dark (scrolled); click goes to home and scroll to top */}

@@ -1,5 +1,6 @@
 import {
-  Building2, Code, Cloud, Shield, Bot, Headphones, Lightbulb,
+  Building2, Code, Cloud, Shield, Bot, Headphones, Lightbulb, Presentation,
+  TrendingUp, Database,
 } from 'lucide-react';
 
 export const services = [
@@ -148,6 +149,81 @@ export const services = [
       { title: 'Analyze', desc: 'Options and trade-offs.' },
       { title: 'Recommend', desc: 'Clear strategy and roadmap.' },
       { title: 'Support', desc: 'Execution support as needed.' }
+    ]
+  },
+  {
+    id: 'presentation-document-services',
+    title: 'Presentation & Document Services',
+    shortDesc: 'Business presentation (PPT) design and document formatting that communicate your message clearly and professionally.',
+    fullDesc: 'We create polished presentations and documents that win stakeholders and convey your brand. From investor pitch decks and company profiles to sales decks, training materials, and reports, we deliver professional design and clear structure.',
+    icon: <Presentation className="w-8 h-8" />,
+    features: [
+      'Custom Proposal Creation',
+      'Investor Pitch Deck Design',
+      'Company Profile Design',
+      'Sales Deck & Marketing Presentations',
+      'Training & Educational PPTs',
+      'Infographic Design',
+      'Report & Documentation Formatting'
+    ],
+    technologies: ['PowerPoint', 'Google Slides', 'Keynote', 'Canva', 'Adobe InDesign'],
+    process: [
+      { title: 'Brief', desc: 'Understanding your content and audience.' },
+      { title: 'Structure', desc: 'Outline, narrative, and key messages.' },
+      { title: 'Design', desc: 'Layout, visuals, and brand alignment.' },
+      { title: 'Deliver', desc: 'Final deck or document and revisions.' }
+    ]
+  },
+  {
+    id: 'marketing-seo-optimization',
+    title: 'Marketing & SEO Optimization',
+    shortDesc: 'Grow visibility and conversions with SEO, content marketing, performance campaigns, and marketing automation.',
+    fullDesc: 'We help you rank higher, reach the right audience, and convert leads. From technical and on-page SEO to content strategy, social media, performance marketing, and automation, we deliver data-driven campaigns that align with your business goals.',
+    icon: <TrendingUp className="w-8 h-8" />,
+    features: [
+      'Search Engine Optimization (SEO)',
+      'Website SEO Audit & Optimization',
+      'Keyword Research & Strategy',
+      'On-Page SEO Optimization',
+      'Technical SEO Setup',
+      'Local SEO (Google Business Profile Optimization)',
+      'Content Marketing Strategy',
+      'Social Media Marketing',
+      'Performance Marketing Campaigns',
+      'Lead Generation & Conversion Optimization',
+      'Marketing Automation Setup'
+    ],
+    technologies: ['Google Analytics', 'Search Console', 'Ahrefs', 'SEMrush', 'Meta Ads', 'Google Ads'],
+    process: [
+      { title: 'Audit', desc: 'Current performance and opportunity analysis.' },
+      { title: 'Strategy', desc: 'Goals, channels, and tactics.' },
+      { title: 'Execute', desc: 'Campaigns, content, and optimization.' },
+      { title: 'Optimize', desc: 'Tracking, reporting, and iteration.' }
+    ]
+  },
+  {
+    id: 'database-development-integration',
+    title: 'Database Development & Integration Services',
+    shortDesc: 'Robust database design, integration, and data migration so your applications and systems work on a solid data foundation.',
+    fullDesc: 'We design and build databases that scale and integrate seamlessly with your apps and third-party systems. From architecture and migration to APIs, backend connectivity, and cloud databases, we deliver reliable data solutions.',
+    icon: <Database className="w-8 h-8" />,
+    features: [
+      'Database Design & Development',
+      'Database Architecture Planning',
+      'Database Integration with Applications',
+      'Data Migration (Old System to New System)',
+      'API Development & Database Integration',
+      'Backend & Database Connectivity Setup',
+      'Cloud Database Integration',
+      'Custom Data Management Solutions',
+      'Third-Party System Integration'
+    ],
+    technologies: ['PostgreSQL', 'MongoDB', 'MySQL', 'Redis', 'AWS RDS', 'REST/GraphQL'],
+    process: [
+      { title: 'Assess', desc: 'Requirements, existing systems, and constraints.' },
+      { title: 'Design', desc: 'Schema, architecture, and integration approach.' },
+      { title: 'Build', desc: 'Development, migration, and APIs.' },
+      { title: 'Deploy', desc: 'Go-live, monitoring, and support.' }
     ]
   },
 ];

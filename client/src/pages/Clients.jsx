@@ -65,6 +65,22 @@ const featuredWork = [
     domain: 'onxstudio.com',
     image: '/onx.png',
     alt: 'ONX STUDIO  -  Creative Studio and Brand Experience'
+  },
+  {
+    clientName: 'DataBot Labs',
+    title: 'Professional Ecommerce Website for Sale Robots',
+    url: '#',
+    domain: 'databotlabs.com',
+    image: '/Image5.png',
+    alt: 'DataBot Labs  -  Professional Ecommerce Website for Sale Robots'
+  },
+  {
+    clientName: 'Aniyah',
+    title: 'Modern and Women Product Sell Focus Ecommerce Website',
+    url: '#',
+    domain: 'aniyah.com',
+    image: '/Image6.png',
+    alt: 'Aniyah  -  Modern and Women Product Sell Focus Ecommerce Website'
   }
 ];
 

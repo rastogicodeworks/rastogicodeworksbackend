@@ -129,7 +129,7 @@ export default function Services() {
           {/* Row 1: Software & App Development (big left) + Organization Setup (short right) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <Link to={`/services/${services[1].id}`} className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-600 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-6 group-hover:scale-110 transition-transform duration-500">
                 <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
                   {services[1].icon}
@@ -145,13 +145,13 @@ export default function Services() {
                   </div>
                 ))}
               </div>
-              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 mt-auto">
+              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
                 View More
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
             <Link to={`/services/${services[0].id}`} className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-600 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
                 <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
                   {services[0].icon}
@@ -159,7 +159,7 @@ export default function Services() {
               </div>
               <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{services[0].title}</h3>
               <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{services[0].shortDesc}</p>
-              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 mt-auto">
+              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
                 View More
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
@@ -168,7 +168,7 @@ export default function Services() {
           {/* Row 2: Security & Compliance (big left) + Infrastructure & Cloud (short right) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <Link to={`/services/${services[3].id}`} className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-600 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-6 group-hover:scale-110 transition-transform duration-500">
                 <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
                   {services[3].icon}
@@ -184,13 +184,13 @@ export default function Services() {
                   </div>
                 ))}
               </div>
-              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 mt-auto">
+              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
                 View More
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
             <Link to={`/services/${services[2].id}`} className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-600 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
                 <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
                   {services[2].icon}
@@ -198,7 +198,7 @@ export default function Services() {
               </div>
               <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{services[2].title}</h3>
               <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{services[2].shortDesc}</p>
-              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 mt-auto">
+              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
                 View More
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
@@ -212,7 +212,7 @@ export default function Services() {
                 to={`/services/${service.id}`}
                 className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-600 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
+                <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
                   <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
                     {service.icon}
@@ -220,7 +220,7 @@ export default function Services() {
                 </div>
                 <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{service.title}</h3>
                 <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{service.shortDesc}</p>
-                <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 mt-auto">
+                <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
                   View More
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </span>
