@@ -24,14 +24,14 @@ invoicesRouter.get('/', async (req, res) => {
   }
 });
 
-// Helper to compute totals server-side
-function computeTotals(items, taxRate = 0.18) {
+// Helper to compute totals server-side (no tax applied)
+function computeTotals(items, taxRate = 0) {
   const subtotal = (items || []).reduce(
     (sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.price) || 0)),
     0,
   );
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
   return { subtotal, taxRate, tax, total };
 }
 

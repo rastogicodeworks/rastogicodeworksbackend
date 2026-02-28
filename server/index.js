@@ -18,20 +18,43 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = '0.0.0.0';
 
-// Normalize: trim, remove trailing slash, so https://example.vercel.app/ matches
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
-  .map((o) => o.trim().replace(/\/$/, ''))
-  .filter(Boolean);
+// Build allowed CORS origins: trim, strip quotes, no trailing slash; add www/non-www pair
+function buildAllowedOrigins() {
+  const raw = (process.env.CLIENT_URL || 'http://localhost:5173').trim();
+  const list = raw
+    .split(',')
+    .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
+    .filter(Boolean);
+  const set = new Set(list);
+  // For each http(s) origin, allow both www and non-www so one env value covers both (skip localhost)
+  list.forEach((url) => {
+    try {
+      if (!url.startsWith('http')) return;
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1') return;
+      if (u.hostname.startsWith('www.')) {
+        set.add(`${u.protocol}//${u.hostname.slice(4)}${u.port ? ':' + u.port : ''}`);
+      } else {
+        set.add(`${u.protocol}//www.${u.hostname}${u.port ? ':' + u.port : ''}`);
+      }
+    } catch (_) {}
+  });
+  return [...set];
+}
+
+const allowedOrigins = buildAllowedOrigins();
+if (process.env.NODE_ENV === 'production') {
+  console.log('[CORS] Allowed origins:', allowedOrigins.join(', ') || '(none)');
+}
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Allow requests with no origin (e.g. Postman, same-origin)
       if (!origin) return cb(null, true);
-      const normalized = origin.replace(/\/$/, '');
+      const normalized = origin.replace(/\/+$/, '');
       if (allowedOrigins.includes(normalized)) return cb(null, true);
-      cb(new Error('Not allowed by CORS'));
+      cb(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
