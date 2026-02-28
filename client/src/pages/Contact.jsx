@@ -94,8 +94,20 @@ export default function Contact() {
     <div className="overflow-x-hidden bg-white selection:bg-primary-100 selection:text-primary-900 font-sans">
       <SEO
         title="Contact"
-        description="Get in touch with Rastogi Codeworks. Email, phone, or contact form. We'd love to hear about your project and discuss how we can help."
+        description="Contact Rastogi Codeworks for custom software development. Email rastogicodeworks@gmail.com, call +91 8859985607, or use our form. Based in Netaji Subhash Place, New Delhi. Get a free quote for web, mobile, or cloud projects across India."
         path="/contact"
+        keywords="contact Rastogi Codeworks, software development enquiry, get quote India, web development contact, New Delhi software company, hire developers India"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: 'Rastogi Codeworks',
+          description: 'Professional software development and digital solutions. Where Code Meets Experience.',
+          url: 'https://rastogicodeworks.com',
+          email: 'rastogicodeworks@gmail.com',
+          telephone: '+918859985607',
+          address: { '@type': 'PostalAddress', addressLocality: 'New Delhi', addressRegion: 'Delhi', addressCountry: 'IN' },
+          areaServed: { '@type': 'Country', name: 'India' },
+        }}
       />
       {/* Hero  -  inviting, connection-focused */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-28 overflow-hidden">

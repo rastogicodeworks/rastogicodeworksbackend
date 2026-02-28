@@ -5,14 +5,16 @@ const DEFAULT_IMAGE = '/logo.png';
 const DEFAULT_DESCRIPTION = 'Rastogi Codeworks - Where Code Meets Experience. Professional software development and digital solutions.';
 
 /**
- * SEO component for per-page meta tags, Open Graph, and Twitter Card.
- * Use on each page with page-specific title, description, and optional path/image.
+ * SEO component for per-page meta tags, Open Graph, Twitter Card, and optional keywords.
+ * Use on each page with page-specific title, description, and optional path/image/keywords.
+ * jsonLd can be a single object or an array of schema objects.
  */
 export default function SEO({
   title,
   description = DEFAULT_DESCRIPTION,
   path = '',
   image = DEFAULT_IMAGE,
+  keywords = null,
   noIndex = false,
   type = 'website',
   jsonLd = null,
@@ -20,12 +22,14 @@ export default function SEO({
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://rastogicodeworks.com';
   const canonical = path ? `${baseUrl}${path.startsWith('/') ? path : `/${path}`}` : baseUrl + '/';
   const imageUrl = image.startsWith('http') ? image : `${baseUrl}${image.startsWith('/') ? image : `/${image}`}`;
-  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} | Where Code Meets Experience`;
+  const fullTitle = title ? `${SITE_NAME} | ${title}` : `${SITE_NAME} | Where Code Meets Experience`;
+  const jsonLdArray = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={keywords} />}
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
       {!noIndex && (
         <>
@@ -45,9 +49,9 @@ export default function SEO({
           <meta name="twitter:image:alt" content={SITE_NAME} />
         </>
       )}
-      {jsonLd && (
+      {jsonLdArray.length > 0 && (
         <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
+          {JSON.stringify(jsonLdArray.length === 1 ? jsonLdArray[0] : { '@graph': jsonLdArray })}
         </script>
       )}
     </Helmet>

@@ -7,8 +7,9 @@ export default function Documentation() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Documentation"
-        description="Guides, APIs, and technical documentation for Rastogi Codeworks products and services."
+        description="Technical documentation, guides, and APIs for Rastogi Codeworks products and services. Get help with integration, setup, and best practices for software development."
         path="/documentation"
+        keywords="Rastogi Codeworks documentation, technical guides, API docs, software development documentation"
       />
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

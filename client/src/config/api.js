@@ -2,10 +2,11 @@
  * API base URL for all backend requests.
  * - Local dev: uses http://localhost:5000 if env is unset or empty.
  * - Production (Vercel): set VITE_API_URL in Vercel → Settings → Environment Variables
- *   to your backend URL (e.g. https://your-app.onrender.com), then redeploy.
+ *   to your backend URL (e.g. https://rastogicodeworksbackend.onrender.com), then redeploy.
  */
+const BACKEND_URL = 'https://rastogicodeworksbackend.onrender.com';
 const raw = (import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL || '').trim();
-const API_BASE = raw || 'http://localhost:5000';
+const API_BASE = raw || (import.meta.env.PROD ? BACKEND_URL : 'http://localhost:5000');
 
 /**
  * True when the app is running in production (non-localhost) but API_BASE is still localhost.
@@ -19,7 +20,7 @@ export function isProductionWithoutApi() {
 }
 
 export const PRODUCTION_API_MESSAGE =
-  'Backend not configured for production. In Vercel → Project → Settings → Environment Variables, add VITE_API_URL = your backend URL (e.g. https://your-app.onrender.com), then redeploy.';
+  'Backend not configured for production. In Vercel → Project → Settings → Environment Variables, add VITE_API_URL = https://rastogicodeworksbackend.onrender.com (or your backend URL), then redeploy.';
 
 /** Message when running on localhost but backend is unreachable (e.g. server not started). */
 export const LOCAL_SERVER_UNREACHABLE_MESSAGE =

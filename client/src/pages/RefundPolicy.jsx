@@ -7,8 +7,9 @@ export default function RefundPolicy() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Refund Policy"
-        description="Rastogi Codeworks refund policy. Our approach to client satisfaction and refunds for our software development services."
+        description="Rastogi Codeworks refund policy: our approach to client satisfaction, payments, and refunds for software development and digital services."
         path="/refund-policy"
+        keywords="Rastogi Codeworks refund policy, refunds, payment policy"
       />
       <section className="relative pt-32 pb-12 md:pt-48 md:pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

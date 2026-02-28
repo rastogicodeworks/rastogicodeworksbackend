@@ -7,8 +7,9 @@ export default function TermsConditions() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Terms & Conditions"
-        description="Terms and conditions for using the Rastogi Codeworks website and services. Read our legal terms and user agreement."
+        description="Terms and conditions for using the Rastogi Codeworks website and services. Legal terms, user agreement, and acceptable use policy."
         path="/terms-and-conditions"
+        keywords="Rastogi Codeworks terms and conditions, terms of service, legal"
       />
       <section className="relative pt-32 pb-12 md:pt-48 md:pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

@@ -23,6 +23,7 @@ const services = [
 ];
 
 const resources = [
+  { to: '/resources', label: 'Resources' },
   { to: '/blog', label: 'Blog' },
   { to: '/case-studies', label: 'Case Studies' },
   { to: '/documentation', label: 'Documentation' },

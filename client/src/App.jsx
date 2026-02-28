@@ -13,7 +13,9 @@ import Login from './pages/Login';
 import ClientDashboard from './pages/ClientDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import CaseStudies from './pages/CaseStudies';
+import Resources from './pages/Resources';
 import Documentation from './pages/Documentation';
 import Support from './pages/Support';
 import FAQ from './pages/FAQ';
@@ -65,7 +67,9 @@ function App() {
           }
         />
         <Route path="blog" element={<Blog />} />
+        <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="case-studies" element={<CaseStudies />} />
+        <Route path="resources" element={<Resources />} />
         <Route path="documentation" element={<Documentation />} />
         <Route path="support" element={<Support />} />
         <Route path="faq" element={<FAQ />} />

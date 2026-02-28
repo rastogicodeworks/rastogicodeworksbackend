@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
+import { MapPin, ArrowRight } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import { getLatestPosts } from '../data/blogPosts';
 
 const logos = [
   'Nb Aurum',
@@ -234,9 +235,10 @@ export default function Home() {
   return (
     <div className="overflow-x-hidden">
       <SEO
-        title="Home"
-        description="Rastogi Codeworks - Best software development & web development across India. Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata and all states & cities. Where Code Meets Experience."
+        title=""
+        description="Rastogi Codeworks - Best software development & web development across India. Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata and all states & cities. Custom web apps, mobile apps, cloud & digital solutions. Where Code Meets Experience."
         path="/"
+        keywords="software development India, web development company, custom software, mobile app development, Mumbai Delhi Bangalore, Rastogi Codeworks, digital solutions"
         jsonLd={organizationJsonLd}
       />
       {/* Hero Section */}
@@ -913,6 +915,45 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Latest from the blog - content marketing */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnimateOnScroll variant="up" className="flex flex-col md:flex-row justify-between items-center md:items-end gap-4 mb-10">
+            <div>
+              <h2 className="text-3xl md:text-5xl font-bold text-primary-950 mb-4">Latest from the blog</h2>
+              <p className="text-lg text-slate-600 max-w-xl">
+                Insights on software strategy, agile delivery, and building products that scale.
+              </p>
+            </div>
+            <Link
+              to="/blog"
+              className="inline-flex items-center gap-2 text-primary-600 font-semibold hover:text-primary-700 transition-colors shrink-0"
+            >
+              View all posts <ArrowRight className="w-5 h-5" />
+            </Link>
+          </AnimateOnScroll>
+          <div className="grid md:grid-cols-3 gap-6">
+            {getLatestPosts(3).map((post, i) => (
+              <AnimateOnScroll key={post.slug} variant="up" delay={i * 80}>
+                <Link
+                  to={`/blog/${post.slug}`}
+                  className="block rounded-2xl border border-primary-100 bg-white p-6 shadow-sm hover:shadow-lg hover:border-primary-200 transition-all duration-300 group"
+                >
+                  <span className="text-xs font-semibold text-primary-600 uppercase tracking-wider">{post.category}</span>
+                  <h3 className="text-xl font-bold text-primary-950 mt-2 mb-2 group-hover:text-primary-700 transition-colors line-clamp-2">
+                    {post.title}
+                  </h3>
+                  <p className="text-slate-600 text-sm line-clamp-2">{post.excerpt}</p>
+                  <span className="inline-flex items-center gap-1 text-primary-600 font-semibold text-sm mt-4 group-hover:gap-2 transition-all">
+                    Read article <ArrowRight className="w-4 h-4" />
+                  </span>
+                </Link>
+              </AnimateOnScroll>
             ))}
           </div>
         </div>

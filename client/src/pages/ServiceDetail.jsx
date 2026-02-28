@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Zap, Shield, Target } from 'lucide-react';
 import { services } from '../data/services';
 import PageCTA from '../components/PageCTA';
+import SEO from '../components/SEO';
 
 export default function ServiceDetail() {
   const { id } = useParams();
@@ -19,8 +20,26 @@ export default function ServiceDetail() {
 
   if (!service) return null;
 
+  const baseUrl = 'https://rastogicodeworks.com';
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Services', item: `${baseUrl}/services` },
+      { '@type': 'ListItem', position: 3, name: service.title, item: `${baseUrl}/services/${service.id}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-white selection:bg-primary-100 selection:text-primary-900">
+      <SEO
+        title={service.title}
+        description={`${service.shortDesc} Rastogi Codeworks delivers ${service.title.toLowerCase()} across India. Get a custom quote for your project.`}
+        path={`/services/${service.id}`}
+        keywords={`${service.title}, software development India, ${service.technologies?.join(', ')}`}
+        jsonLd={breadcrumbSchema}
+      />
       {/* Hero  -  marketing-led, bold */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-950 text-white">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] opacity-50" />

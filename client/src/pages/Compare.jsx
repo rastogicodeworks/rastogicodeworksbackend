@@ -170,8 +170,9 @@ export default function Compare() {
     <div className="overflow-x-hidden bg-white selection:bg-primary-100 selection:text-primary-900 font-sans">
       <SEO
         title="Compare"
-        description="See how Rastogi Codeworks compares: direct access to engineering, clean code, modern tech stack, transparent pricing, and delivery you can trust."
+        description="Why choose Rastogi Codeworks? Compare our software development approach: senior engineers, agile delivery, modern tech stack, transparent pricing, and on-time delivery. Best for startups and enterprises across India."
         path="/compare"
+        keywords="Rastogi Codeworks vs, software development company comparison, best dev agency India, agile development, transparent pricing"
       />
       {/* Hero */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-28 overflow-hidden">

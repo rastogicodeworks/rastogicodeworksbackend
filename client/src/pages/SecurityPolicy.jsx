@@ -7,8 +7,9 @@ export default function SecurityPolicy() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Security Policy"
-        description="Rastogi Codeworks security policy. How we protect your data, our website, and our systems."
+        description="Rastogi Codeworks security policy: how we protect your data, secure our website and client portal, and follow security best practices."
         path="/security-policy"
+        keywords="Rastogi Codeworks security policy, data security, secure development"
       />
       <section className="relative pt-32 pb-12 md:pt-48 md:pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

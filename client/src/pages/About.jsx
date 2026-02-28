@@ -8,8 +8,9 @@ export default function About() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="About Us"
-        description="Rastogi Codeworks - architects of the digital future. We are a collective of thinkers, makers, and problem solvers building software that matters."
+        description="Rastogi Codeworks is a software development company in India. We build custom web apps, mobile apps, and cloud solutions for startups and enterprises. Learn about our mission, team, and why we're trusted across Mumbai, Delhi, Bangalore, and pan-India."
         path="/about"
+        keywords="about Rastogi Codeworks, software company India, web development company, custom software development, digital solutions India, tech team, Vasu Rastogi, software engineering"
       />
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">

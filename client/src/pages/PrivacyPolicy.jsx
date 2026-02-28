@@ -7,8 +7,9 @@ export default function PrivacyPolicy() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Privacy Policy"
-        description="Rastogi Codeworks privacy policy. How we collect, use, and protect your information when you use our website and services."
+        description="Rastogi Codeworks privacy policy: how we collect, use, and protect your data when you use our website, contact form, and client portal. Your privacy matters."
         path="/privacy-policy"
+        keywords="Rastogi Codeworks privacy policy, data protection, GDPR, privacy"
       />
       <section className="relative pt-32 pb-12 md:pt-48 md:pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

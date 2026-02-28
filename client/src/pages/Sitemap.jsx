@@ -18,6 +18,7 @@ export default function Sitemap() {
   ];
 
   const resourcePages = [
+    { to: '/resources', label: 'Resources' },
     { to: '/blog', label: 'Blog' },
     { to: '/case-studies', label: 'Case Studies' },
     { to: '/documentation', label: 'Documentation' },
@@ -39,8 +40,9 @@ export default function Sitemap() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Sitemap"
-        description="Find your way around Rastogi Codeworks. Links to all pages: Home, About, Services, Clients, Pricing, Contact, Blog, FAQ, and more."
+        description="Rastogi Codeworks sitemap: quick links to all pages including Home, About, Services, Pricing, Contact, Blog, Case Studies, FAQ, and legal policies."
         path="/sitemap"
+        keywords="Rastogi Codeworks sitemap, site map, all pages"
       />
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-24 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />

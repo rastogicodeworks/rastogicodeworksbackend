@@ -81,8 +81,9 @@ export default function Services() {
     <div className="overflow-x-hidden bg-white selection:bg-primary-100 selection:text-primary-900">
       <SEO
         title="Services"
-        description={`Best software development & web development services across India - Mumbai, Delhi, Bangalore, Pune, Hyderabad, Chennai, ${citiesForSEO} and all states. Get a tailored quote.`}
+        description={`Custom software development, web development, mobile apps, cloud, and IT services across India. Mumbai, Delhi, Bangalore, Pune, Hyderabad, Chennai, ${citiesForSEO}. Get a tailored quote from Rastogi Codeworks.`}
         path="/services"
+        keywords="software development services India, web development company, custom app development, cloud services, mobile app development, IT consulting India, Rastogi Codeworks services"
       />
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">

@@ -9,8 +9,9 @@ export default function Pricing() {
     <div className="overflow-x-hidden bg-white selection:bg-primary-100 selection:text-primary-900 font-sans">
       <SEO
         title="Pricing"
-        description="Transparent pricing for every service. Get a tailored quote for web development, mobile apps, cloud, and more. All projects scoped to your needs."
+        description="Transparent pricing for custom software development, web development, mobile apps, and cloud services. Get a tailored quote for your project. No hidden costs - Rastogi Codeworks delivers value across India."
         path="/pricing"
+        keywords="software development pricing, web development cost India, custom app quote, software project pricing, development rates, Rastogi Codeworks pricing"
       />
       {/* Hero */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-28 overflow-hidden">

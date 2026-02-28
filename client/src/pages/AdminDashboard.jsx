@@ -501,7 +501,8 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => setActiveSection('invoices')}
-                        className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors"
+                        className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors py-2 px-3 -my-2 -mx-3 rounded-lg touch-manipulation active:bg-primary-50"
+                        aria-label="View all invoices"
                       >
                         View all <ArrowRight className="w-4 h-4" />
                       </button>
@@ -527,44 +528,74 @@ export default function AdminDashboard() {
                           </button>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto -mx-4 sm:mx-0 admin-scroll">
-                          <table className="w-full min-w-[400px] text-left text-sm">
-                            <thead className="bg-primary-50/50 border-b border-primary-100">
-                              <tr>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Client</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Date</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-right">Amount</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-center">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-primary-100/50">
+                        <>
+                          {/* Mobile: card list */}
+                          <div className="md:hidden overflow-y-auto admin-scroll px-4 pb-4">
+                            <ul className="space-y-3">
                               {invoices.slice(0, 5).map((inv) => (
-                                <tr key={inv._id} className="hover:bg-primary-50/30 transition-colors">
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs">
+                                <li key={inv._id} className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm active:bg-primary-50/30 transition-colors">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shrink-0">
                                         {inv.clientName.charAt(0).toUpperCase()}
                                       </div>
-                                      <div>
-                                        <p className="font-semibold text-primary-950">{inv.clientName}</p>
+                                      <div className="min-w-0">
+                                        <p className="font-semibold text-primary-950 truncate">{inv.clientName}</p>
                                         <p className="text-xs text-primary-500">#{String(inv._id).slice(-6)}</p>
                                       </div>
                                     </div>
-                                  </td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-primary-600 whitespace-nowrap">
+                                    <div className="text-right shrink-0">
+                                      <p className="font-semibold text-primary-950 text-sm">Rs. {(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                                      <StatusPill status={inv.status} />
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-primary-600 mt-2 pt-2 border-t border-primary-100">
                                     {new Date(inv.invoiceDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}
-                                  </td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-right font-semibold text-primary-950 whitespace-nowrap">
-                                    Rs. {(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                  </td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-center">
-                                    <StatusPill status={inv.status} />
-                                  </td>
-                                </tr>
+                                  </p>
+                                </li>
                               ))}
-                            </tbody>
-                          </table>
-                        </div>
+                            </ul>
+                          </div>
+                          {/* Desktop: table */}
+                          <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0 admin-scroll">
+                            <table className="w-full min-w-[400px] text-left text-sm">
+                              <thead className="bg-primary-50/50 border-b border-primary-100">
+                                <tr>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Client</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Date</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-right">Amount</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-primary-100/50">
+                                {invoices.slice(0, 5).map((inv) => (
+                                  <tr key={inv._id} className="hover:bg-primary-50/30 transition-colors">
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs">
+                                          {inv.clientName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <p className="font-semibold text-primary-950">{inv.clientName}</p>
+                                          <p className="text-xs text-primary-500">#{String(inv._id).slice(-6)}</p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-primary-600 whitespace-nowrap">
+                                      {new Date(inv.invoiceDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-right font-semibold text-primary-950 whitespace-nowrap">
+                                      Rs. {(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-center">
+                                      <StatusPill status={inv.status} />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1218,6 +1249,74 @@ export default function AdminDashboard() {
                               </td>
                             </tr>
                           ); })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Client credentials reference table */}
+                <div className="admin-card-glass rounded-2xl border border-primary-200/60 overflow-hidden">
+                  <div className="px-4 sm:px-6 py-4 border-b border-primary-100">
+                    <h2 className="text-lg font-bold text-primary-950 flex items-center gap-2">
+                      <KeyRound className="w-5 h-5 text-primary-500" />
+                      Client credentials reference
+                    </h2>
+                    <p className="text-sm text-primary-700/80 mt-0.5">Login (email) and suggested username format. Passwords are set at creation and shared securely — not stored.</p>
+                  </div>
+                  {clientsLoading ? (
+                    <div className="flex justify-center py-12">
+                      <div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                    </div>
+                  ) : clients.length === 0 ? (
+                    <div className="py-12 text-center text-primary-600">
+                      <KeyRound className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p className="font-medium">No clients yet</p>
+                      <p className="text-sm mt-1">Create a client above to see credentials reference here.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[400px] text-left text-sm">
+                        <thead className="bg-primary-50/50 border-b border-primary-100">
+                          <tr>
+                            <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Client</th>
+                            <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Login (Email)</th>
+                            <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Username format</th>
+                            <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Password</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-primary-100/50">
+                          {clients.map((c) => {
+                            const slug = (c.name || c.email || '')
+                              .toString()
+                              .toLowerCase()
+                              .trim()
+                              .replace(/\s+/g, '-')
+                              .replace(/[^a-z0-9-]/g, '');
+                            const usernameFormat = slug ? `${slug}@${new Date().getFullYear()}` : '—';
+                            const isNewlyCreated = createdCredentials && createdCredentials.email === c.email;
+                            return (
+                              <tr key={c._id || c.id} className={`transition-colors ${isNewlyCreated ? 'bg-primary-50/50' : 'hover:bg-primary-50/30'}`}>
+                                <td className="px-4 sm:px-6 py-3 font-medium text-primary-900">{c.name || '-'}</td>
+                                <td className="px-4 sm:px-6 py-3">
+                                  <code className="px-2 py-1 rounded bg-white border border-primary-200 text-primary-800 text-xs font-mono">{c.email}</code>
+                                </td>
+                                <td className="px-4 sm:px-6 py-3 text-primary-700 font-mono text-xs">{usernameFormat}</td>
+                                <td className="px-4 sm:px-6 py-3">
+                                  {isNewlyCreated && createdCredentials?.temporaryPassword ? (
+                                    <span className="flex items-center gap-2">
+                                      <code className="px-2 py-1 rounded bg-white border border-primary-300 text-primary-800 text-xs font-mono">{createdCredentials.temporaryPassword}</code>
+                                      <button type="button" onClick={() => copyToClipboard(createdCredentials.temporaryPassword)} className="p-1.5 rounded-lg hover:bg-primary-100 text-primary-600" title="Copy password">
+                                        <Copy className="w-4 h-4" />
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <span className="text-primary-500 italic text-xs">Set at creation</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

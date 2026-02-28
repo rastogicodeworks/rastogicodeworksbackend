@@ -102,8 +102,9 @@ export default function Clients() {
     <div className="overflow-x-hidden bg-white selection:bg-primary-100 selection:text-primary-900 font-sans">
       <SEO
         title="Clients & Work"
-        description="Featured clients and projects by Rastogi Codeworks. Finance dashboards, revamped websites, and digital products we've built for startups and enterprises."
+        description="Featured clients and projects by Rastogi Codeworks. Finance dashboards, revamped websites, job portals, and digital products we've built for startups and enterprises across India and globally."
         path="/clients"
+        keywords="Rastogi Codeworks clients, software development portfolio, web development projects India, case studies, client work"
       />
       {/* Hero  -  refined, editorial */}
       <section className="relative min-h-[85vh] flex items-center pt-28 pb-20 md:pt-40 md:pb-28 overflow-hidden">

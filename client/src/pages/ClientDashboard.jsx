@@ -214,7 +214,8 @@ export default function ClientDashboard() {
                       <button
                         type="button"
                         onClick={() => setActiveSection('invoices')}
-                        className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors"
+                        className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors py-2 px-3 -my-2 -mx-3 rounded-lg touch-manipulation active:bg-primary-50"
+                        aria-label="View all invoices"
                       >
                         View all <ArrowRight className="w-4 h-4" />
                       </button>
@@ -239,35 +240,60 @@ export default function ClientDashboard() {
                           </Link>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto -mx-4 sm:mx-0 admin-scroll">
-                          <table className="w-full min-w-[400px] text-left text-sm">
-                            <thead className="bg-primary-50/50 border-b border-primary-100">
-                              <tr>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Invoice</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Due</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-right">Amount</th>
-                                <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-center">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-primary-100/50">
+                        <>
+                          {/* Mobile: card list */}
+                          <div className="md:hidden overflow-y-auto admin-scroll px-4 pb-4">
+                            <ul className="space-y-3">
                               {invoices.slice(0, 5).map((inv) => (
-                                <tr key={inv.id} className="hover:bg-primary-50/30 transition-colors">
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3">
-                                    <div>
+                                <li key={inv.id} className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm active:bg-primary-50/30 transition-colors">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-semibold text-primary-950">{inv.invoiceId}</p>
                                       <p className="text-xs text-primary-500">Issued {formatDate(inv.invoiceDate)}</p>
                                     </div>
-                                  </td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-primary-600 whitespace-nowrap">{formatDate(inv.dueDate)}</td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-right font-semibold text-primary-950 whitespace-nowrap">{inv.amountFormatted ?? inv.amount}</td>
-                                  <td className="px-4 sm:px-6 py-2 sm:py-3 text-center">
-                                    <StatusPill status={inv.status === 'Paid' ? 'paid' : 'unpaid'} />
-                                  </td>
-                                </tr>
+                                    <div className="text-right shrink-0">
+                                      <p className="font-semibold text-primary-950 text-sm">{inv.amountFormatted ?? inv.amount}</p>
+                                      <StatusPill status={inv.status === 'Paid' ? 'paid' : 'unpaid'} />
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-primary-600 mt-2 pt-2 border-t border-primary-100">
+                                    Due {formatDate(inv.dueDate)}
+                                  </p>
+                                </li>
                               ))}
-                            </tbody>
-                          </table>
-                        </div>
+                            </ul>
+                          </div>
+                          {/* Desktop: table */}
+                          <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0 admin-scroll">
+                            <table className="w-full min-w-[400px] text-left text-sm">
+                              <thead className="bg-primary-50/50 border-b border-primary-100">
+                                <tr>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Invoice</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Due</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-right">Amount</th>
+                                  <th className="px-4 sm:px-6 py-2 sm:py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-primary-100/50">
+                                {invoices.slice(0, 5).map((inv) => (
+                                  <tr key={inv.id} className="hover:bg-primary-50/30 transition-colors">
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3">
+                                      <div>
+                                        <p className="font-semibold text-primary-950">{inv.invoiceId}</p>
+                                        <p className="text-xs text-primary-500">Issued {formatDate(inv.invoiceDate)}</p>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-primary-600 whitespace-nowrap">{formatDate(inv.dueDate)}</td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-right font-semibold text-primary-950 whitespace-nowrap">{inv.amountFormatted ?? inv.amount}</td>
+                                    <td className="px-4 sm:px-6 py-2 sm:py-3 text-center">
+                                      <StatusPill status={inv.status === 'Paid' ? 'paid' : 'unpaid'} />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
