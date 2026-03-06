@@ -70,7 +70,7 @@ export default function Team() {
               {/* Content */}
               <div className="md:col-span-3 p-8 md:p-12 flex flex-col justify-center">
                 <p className="text-xs font-bold text-primary-600 uppercase tracking-widest mb-2">
-                  Founder &amp; CEO
+                  Founder &amp; CEO of Rastogi Codeworks
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-4">
                   {founder.name}
