@@ -40,6 +40,7 @@ export async function generateInvoicePdf({
   items = [],
   notes = '',
   totals = { subtotal: 0, total: 0 },
+  paymentTerms = [],
   invoiceId = `INV-${Date.now().toString().slice(-6)}`,
 }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -218,6 +219,61 @@ export async function generateInvoicePdf({
   doc.text('Total', totalsLabelX, y);
   doc.text(`${CURRENCY} ${(totals.total ?? 0).toFixed(2)}`, totalsValueX, y, { align: 'right' });
   y += 16;
+
+  // ----- Payment Terms -----
+  if (paymentTerms && paymentTerms.length > 0) {
+    if (y > pageH - 60) { doc.addPage(); y = 20; }
+
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(5, 46, 22);
+    doc.text('Payment Terms', margin, y);
+    y += 7;
+
+    const termColLabel = margin;
+    const termColPct = margin + 75;
+    const termColAmt = margin + 110;
+    const termColDue = margin + 145;
+    const termRowH = 8;
+
+    // Header
+    doc.setFillColor(240, 253, 244);
+    doc.rect(margin, y, contentW, termRowH, 'F');
+    doc.setDrawColor(187, 247, 208);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    doc.line(margin, y + termRowH, pageW - margin, y + termRowH);
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(22, 101, 52);
+    doc.text('Installment', termColLabel + 3, y + 5.5);
+    doc.text('%', termColPct + 3, y + 5.5);
+    doc.text('Amount', termColAmt + 3, y + 5.5);
+    doc.text('Due Date', termColDue + 3, y + 5.5);
+    y += termRowH;
+
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(51, 65, 85);
+    paymentTerms.forEach((term, idx) => {
+      if (y > pageH - 30) { doc.addPage(); y = 20; }
+      const rowBg = idx % 2 === 1;
+      if (rowBg) { doc.setFillColor(248, 250, 252); doc.rect(margin, y, contentW, termRowH, 'F'); }
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y + termRowH, pageW - margin, y + termRowH);
+      doc.setFontSize(9);
+      const pct = Number(term.percentage) || 0;
+      const amt = (totals.total || 0) * pct / 100;
+      const dueDateStr = term.dueDate && String(term.dueDate).trim()
+        ? new Date(term.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '—';
+      doc.text((term.label || `Installment ${idx + 1}`).substring(0, 28), termColLabel + 3, y + 5.5);
+      doc.text(`${pct}%`, termColPct + 3, y + 5.5);
+      doc.text(`${CURRENCY} ${amt.toFixed(2)}`, termColAmt + 3, y + 5.5);
+      doc.text(dueDateStr, termColDue + 3, y + 5.5);
+      y += termRowH;
+    });
+    y += 10;
+  }
 
   // ----- Notes / Terms -----
   if (notes && notes.trim()) {

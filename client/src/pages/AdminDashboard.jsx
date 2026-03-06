@@ -23,6 +23,28 @@ import {
   UserPlus,
   Copy,
   KeyRound,
+  Percent,
+  ChevronUp,
+  CreditCard,
+  BarChart2,
+  Target,
+  Zap,
+  TrendingDown,
+  ShieldCheck,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  FolderKanban,
+  Megaphone,
+  Pin,
+  Edit3,
+  User,
+  Lock,
+  CheckSquare,
+  Square,
+  Flag,
+  XCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { downloadInvoicePdf } from '../utils/invoicePdf.js';
 import DashboardNavbar from '../components/DashboardNavbar';
@@ -30,6 +52,15 @@ import API_BASE from '../config/api';
 import { getAuthHeaders, clearAuthToken } from '../config/auth';
 
 const emptyItem = { description: '', quantity: 1, price: 0 };
+const emptyTerm = { label: '', percentage: '', dueDate: '' };
+
+const PAYMENT_PRESETS = [
+  { label: '100%', terms: [{ label: 'Full Payment', percentage: 100, dueDate: '' }] },
+  { label: '50/50', terms: [{ label: 'Advance', percentage: 50, dueDate: '' }, { label: 'Final', percentage: 50, dueDate: '' }] },
+  { label: '30/30/40', terms: [{ label: 'Advance', percentage: 30, dueDate: '' }, { label: 'Milestone', percentage: 30, dueDate: '' }, { label: 'Final', percentage: 40, dueDate: '' }] },
+  { label: '25/25/50', terms: [{ label: 'Advance', percentage: 25, dueDate: '' }, { label: 'Milestone', percentage: 25, dueDate: '' }, { label: 'Final', percentage: 50, dueDate: '' }] },
+  { label: '10/20/30/40', terms: [{ label: 'Booking', percentage: 10, dueDate: '' }, { label: 'Design', percentage: 20, dueDate: '' }, { label: 'Development', percentage: 30, dueDate: '' }, { label: 'Final', percentage: 40, dueDate: '' }] },
+];
 
 function calculateInvoiceTotals(items) {
   const subtotal = items.reduce(
@@ -57,6 +88,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [downloadingInvId, setDownloadingInvId] = useState(null);
   const [error, setError] = useState('');
 
   // Clients (onboarding) state
@@ -66,7 +98,31 @@ export default function AdminDashboard() {
   const [clientCreateLoading, setClientCreateLoading] = useState(false);
   const [clientCreateError, setClientCreateError] = useState('');
   const [createdCredentials, setCreatedCredentials] = useState(null); // { email, temporaryPassword } after create
-  const [clientDeletingId, setClientDeletingId] = useState(null); // id of client being deleted
+  const [sessionPasswords, setSessionPasswords] = useState({}); // email -> password for all clients created this session
+  const [visiblePasswords, setVisiblePasswords] = useState(new Set()); // emails whose passwords are currently revealed
+  const [clientDeletingId, setClientDeletingId] = useState(null);
+
+  // Projects state
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectForm, setProjectForm] = useState({ title: '', description: '', clientEmail: '', clientName: '', status: 'planning', progress: 0, startDate: '', dueDate: '', milestones: [] });
+  const [projectSaving, setProjectSaving] = useState(false);
+  const [editingProject, setEditingProject] = useState(null); // null = create mode, project obj = edit mode
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [projectError, setProjectError] = useState('');
+
+  // Announcements state
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [annForm, setAnnForm] = useState({ title: '', content: '', pinned: false, audience: 'all' });
+  const [annSaving, setAnnSaving] = useState(false);
+  const [annError, setAnnError] = useState('');
+
+  // Change password (in Settings section)
+  const [changePwForm, setChangePwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [changePwLoading, setChangePwLoading] = useState(false);
+  const [changePwError, setChangePwError] = useState('');
+  const [changePwSuccess, setChangePwSuccess] = useState('');
 
   const totals = useMemo(() => calculateInvoiceTotals(items), [items]);
 
@@ -97,6 +153,19 @@ export default function AdminDashboard() {
   };
 
   const [invoiceClientEmail, setInvoiceClientEmail] = useState(''); // link invoice to portal client (for Clients table)
+  const [paymentTerms, setPaymentTerms] = useState([]);
+  const [showPaymentTerms, setShowPaymentTerms] = useState(false);
+
+  const addPaymentTerm = () => setPaymentTerms((prev) => [...prev, { ...emptyTerm }]);
+  const removePaymentTerm = (i) => setPaymentTerms((prev) => prev.filter((_, idx) => idx !== i));
+  const handleTermChange = (i, field, value) => {
+    setPaymentTerms((prev) => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
+  };
+  const applyPreset = (preset) => {
+    setPaymentTerms(preset.terms.map((t) => ({ ...t })));
+    setShowPaymentTerms(true);
+  };
+  const termsTotalPct = paymentTerms.reduce((s, t) => s + (Number(t.percentage) || 0), 0);
 
   const resetForm = () => {
     setClientName('');
@@ -108,6 +177,8 @@ export default function AdminDashboard() {
     setItems([{ ...emptyItem }]);
     setNotes('');
     setInvoiceClientEmail('');
+    setPaymentTerms([]);
+    setShowPaymentTerms(false);
   };
 
   const handleCreateInvoice = (e) => {
@@ -124,6 +195,7 @@ export default function AdminDashboard() {
       status: invoiceStatus,
       items: items.filter((i) => i.description || i.quantity || i.price),
       notes,
+      paymentTerms: paymentTerms.filter((t) => Number(t.percentage) > 0),
     };
 
     setLoading(true);
@@ -221,6 +293,62 @@ export default function AdminDashboard() {
     const overdueCount = invoices.filter((inv) => inv.status === 'overdue').length;
     const pendingPercentage = totalRevenue > 0 ? Math.round((pendingRevenue / totalRevenue) * 100) : 0;
     const averageInvoice = invoices.length > 0 ? totalRevenue / invoices.length : 0;
+    const collectionRate = totalRevenue > 0 ? Math.round((paidRevenue / totalRevenue) * 100) : 0;
+
+    // This month
+    const now = new Date();
+    const thisMonthInvoices = invoices.filter((inv) => {
+      const d = new Date(inv.invoiceDate);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+    const thisMonthRevenue = thisMonthInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
+    const thisMonthCount = thisMonthInvoices.length;
+
+    // Last month for comparison
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthRevenue = invoices
+      .filter((inv) => {
+        const d = new Date(inv.invoiceDate);
+        return d.getFullYear() === lastMonthDate.getFullYear() && d.getMonth() === lastMonthDate.getMonth();
+      })
+      .reduce((s, inv) => s + (inv.total || 0), 0);
+    const monthGrowth = lastMonthRevenue > 0
+      ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+      : null;
+
+    // Top clients by total billed
+    const clientMap = new Map();
+    invoices.forEach((inv) => {
+      const key = inv.clientName || 'Unknown';
+      const cur = clientMap.get(key) || { name: key, total: 0, paid: 0, count: 0 };
+      cur.total += inv.total || 0;
+      if (inv.status === 'paid') cur.paid += inv.total || 0;
+      cur.count += 1;
+      clientMap.set(key, cur);
+    });
+    const topClients = Array.from(clientMap.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    // Monthly revenue for last 6 months
+    const monthlyData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      const rev = invoices
+        .filter((inv) => {
+          const id = new Date(inv.invoiceDate);
+          return id.getFullYear() === d.getFullYear() && id.getMonth() === d.getMonth();
+        })
+        .reduce((s, inv) => s + (inv.total || 0), 0);
+      monthlyData.push({ label, revenue: rev });
+    }
+    const maxMonthlyRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
+
+    // Overdue revenue
+    const overdueRevenue = invoices
+      .filter((inv) => inv.status === 'overdue')
+      .reduce((s, inv) => s + (inv.total || 0), 0);
 
     return {
       totalInvoices: invoices.length,
@@ -230,8 +358,31 @@ export default function AdminDashboard() {
       unpaidCount,
       paidCount,
       overdueCount,
+      overdueRevenue,
       pendingPercentage,
       averageInvoice,
+      collectionRate,
+      thisMonthRevenue,
+      thisMonthCount,
+      lastMonthRevenue,
+      monthGrowth,
+      topClients,
+      monthlyData,
+      maxMonthlyRevenue,
+      // Invoice aging: 0-30, 31-60, 61-90, 90+ days overdue
+      agingBuckets: (() => {
+        const today = new Date();
+        const buckets = { '0–30d': 0, '31–60d': 0, '61–90d': 0, '90d+': 0 };
+        const amts = { '0–30d': 0, '31–60d': 0, '61–90d': 0, '90d+': 0 };
+        invoices.filter((inv) => inv.status !== 'paid' && inv.dueDate).forEach((inv) => {
+          const days = Math.floor((today - new Date(inv.dueDate)) / 86400000);
+          const key = days <= 30 ? '0–30d' : days <= 60 ? '31–60d' : days <= 90 ? '61–90d' : '90d+';
+          buckets[key]++;
+          amts[key] += inv.total || 0;
+        });
+        return Object.entries(buckets).map(([range, count]) => ({ range, count, amount: amts[range] }));
+      })(),
+      disputedCount: invoices.filter((inv) => inv.dispute?.flagged).length,
     };
   }, [invoices]);
 
@@ -253,12 +404,35 @@ export default function AdminDashboard() {
         items,
         notes,
         totals,
+        paymentTerms: paymentTerms.filter((t) => Number(t.percentage) > 0),
         invoiceId: `INV-${Date.now().toString().slice(-6)}`,
       });
     } catch (err) {
       setError(err?.message || 'Failed to generate PDF.');
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadInvoicePdf = async (inv) => {
+    setDownloadingInvId(inv._id);
+    try {
+      await downloadInvoicePdf({
+        clientName: inv.clientName,
+        billingAddress: inv.billingAddress || '',
+        gstNumber: inv.gstNumber || '',
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate || '',
+        items: inv.items || [],
+        notes: inv.notes || '',
+        totals: { subtotal: inv.subtotal ?? inv.total ?? 0, total: inv.total ?? 0 },
+        paymentTerms: inv.paymentTerms || [],
+        invoiceId: String(inv._id).slice(-6).toUpperCase(),
+      });
+    } catch (err) {
+      setError(err?.message || 'Failed to generate PDF.');
+    } finally {
+      setDownloadingInvId(null);
     }
   };
 
@@ -293,9 +467,9 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch clients when opening Clients section or Create Invoice (for linking invoices to clients)
+  // Fetch clients when opening Clients section, Create Invoice, Projects, or Announcements (for dropdowns)
   useEffect(() => {
-    if (activeSection !== 'clients' && activeSection !== 'create') return;
+    if (activeSection !== 'clients' && activeSection !== 'create' && activeSection !== 'projects' && activeSection !== 'announcements') return;
     setClientsLoading(true);
     fetch(`${API_BASE}/api/clients`, { headers: getAuthHeaders(), credentials: 'include' })
       .then(async (res) => {
@@ -353,6 +527,7 @@ export default function AdminDashboard() {
       })
       .then((data) => {
         setCreatedCredentials({ email: data.client.email, temporaryPassword: data.temporaryPassword });
+        setSessionPasswords((prev) => ({ ...prev, [data.client.email]: data.temporaryPassword }));
         setClientForm({ name: '', email: '', password: '' });
         setClients((prev) => [{ ...data.client, createdAt: data.client.createdAt }, ...prev]);
       })
@@ -362,6 +537,111 @@ export default function AdminDashboard() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard?.writeText(text).then(() => {});
+  };
+
+  // ── Projects ──
+  useEffect(() => {
+    if (activeSection !== 'projects') return;
+    setProjectsLoading(true);
+    fetch(`${API_BASE}/api/projects`, { headers: getAuthHeaders(), credentials: 'include' })
+      .then((r) => r.json().catch(() => ({})))
+      .then((d) => setProjects(d.projects || []))
+      .catch(() => setProjects([]))
+      .finally(() => setProjectsLoading(false));
+  }, [activeSection]);
+
+  const openNewProject = () => {
+    setEditingProject(null);
+    setProjectForm({ title: '', description: '', clientEmail: '', clientName: '', status: 'planning', progress: 0, startDate: '', dueDate: '', milestones: [] });
+    setProjectError('');
+    setShowProjectForm(true);
+  };
+
+  const openEditProject = (p) => {
+    setEditingProject(p);
+    setProjectForm({ title: p.title, description: p.description || '', clientEmail: p.clientEmail || '', clientName: p.clientName || '', status: p.status, progress: p.progress ?? 0, startDate: p.startDate || '', dueDate: p.dueDate || '', milestones: (p.milestones || []).map((m) => ({ ...m })) });
+    setProjectError('');
+    setShowProjectForm(true);
+  };
+
+  const handleSaveProject = async (e) => {
+    e.preventDefault();
+    if (!projectForm.title.trim()) { setProjectError('Title is required.'); return; }
+    setProjectSaving(true);
+    setProjectError('');
+    try {
+      const url = editingProject ? `${API_BASE}/api/projects/${editingProject._id}` : `${API_BASE}/api/projects`;
+      const method = editingProject ? 'PATCH' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, credentials: 'include', body: JSON.stringify(projectForm) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to save project');
+      if (editingProject) setProjects((prev) => prev.map((p) => p._id === data.project._id ? data.project : p));
+      else setProjects((prev) => [data.project, ...prev]);
+      setShowProjectForm(false);
+      setEditingProject(null);
+    } catch (err) { setProjectError(err.message); }
+    finally { setProjectSaving(false); }
+  };
+
+  const handleDeleteProject = async (id) => {
+    if (!window.confirm('Delete this project?')) return;
+    await fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE', headers: getAuthHeaders(), credentials: 'include' });
+    setProjects((prev) => prev.filter((p) => p._id !== id));
+  };
+
+  const toggleMilestone = (i) => {
+    setProjectForm((prev) => ({ ...prev, milestones: prev.milestones.map((m, idx) => idx === i ? { ...m, completed: !m.completed } : m) }));
+  };
+
+  // ── Announcements ──
+  useEffect(() => {
+    if (activeSection !== 'announcements') return;
+    setAnnouncementsLoading(true);
+    fetch(`${API_BASE}/api/announcements`, { headers: getAuthHeaders(), credentials: 'include' })
+      .then((r) => r.json().catch(() => ({})))
+      .then((d) => setAnnouncements(d.announcements || []))
+      .catch(() => setAnnouncements([]))
+      .finally(() => setAnnouncementsLoading(false));
+  }, [activeSection]);
+
+  const handleCreateAnnouncement = async (e) => {
+    e.preventDefault();
+    if (!annForm.title.trim() || !annForm.content.trim()) { setAnnError('Title and content are required.'); return; }
+    setAnnSaving(true);
+    setAnnError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/announcements`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, credentials: 'include', body: JSON.stringify(annForm) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to post');
+      setAnnouncements((prev) => [data.announcement, ...prev]);
+      setAnnForm({ title: '', content: '', pinned: false, audience: 'all' });
+    } catch (err) { setAnnError(err.message); }
+    finally { setAnnSaving(false); }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm('Delete this announcement?')) return;
+    await fetch(`${API_BASE}/api/announcements/${id}`, { method: 'DELETE', headers: getAuthHeaders(), credentials: 'include' });
+    setAnnouncements((prev) => prev.filter((a) => a._id !== id));
+  };
+
+  // ── Change password ──
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePwError('');
+    setChangePwSuccess('');
+    if (changePwForm.newPassword !== changePwForm.confirmPassword) { setChangePwError('New passwords do not match.'); return; }
+    if (changePwForm.newPassword.length < 8) { setChangePwError('New password must be at least 8 characters.'); return; }
+    setChangePwLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/change-password`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, credentials: 'include', body: JSON.stringify({ currentPassword: changePwForm.currentPassword, newPassword: changePwForm.newPassword }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to change password');
+      setChangePwSuccess('Password changed successfully!');
+      setChangePwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setChangePwSuccess(''), 3000);
+    } catch (err) { setChangePwError(err.message); }
+    finally { setChangePwLoading(false); }
   };
 
   const handleDeleteClient = async (client) => {
@@ -391,6 +671,8 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'create', label: 'Create Invoice', icon: FilePlus },
     { id: 'invoices', label: 'Invoices', icon: FileText },
+    { id: 'projects', label: 'Projects', icon: FolderKanban },
+    { id: 'announcements', label: 'Announcements', icon: Megaphone },
     { id: 'clients', label: 'Clients', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -417,6 +699,8 @@ export default function AdminDashboard() {
                   {activeSection === 'overview' && 'Dashboard'}
                   {activeSection === 'create' && 'New Invoice'}
                   {activeSection === 'invoices' && 'Invoices & Payments'}
+                  {activeSection === 'projects' && 'Projects'}
+                  {activeSection === 'announcements' && 'Announcements'}
                   {activeSection === 'clients' && 'Clients'}
                   {activeSection === 'settings' && 'Settings'}
                 </h1>
@@ -424,11 +708,19 @@ export default function AdminDashboard() {
                   {activeSection === 'overview' && 'Welcome back. Here is what’s happening with your business today.'}
                   {activeSection === 'create' && 'Create and send professional invoices to your clients in seconds.'}
                   {activeSection === 'invoices' && 'Manage your billing history, track payments, and handle overdue accounts.'}
+                  {activeSection === 'projects' && 'Create and manage projects assigned to your clients.'}
+                  {activeSection === 'announcements' && 'Post updates and notices visible to your clients in their portal.'}
                   {activeSection === 'clients' && 'Manage your client relationships and project details.'}
                   {activeSection === 'settings' && 'Configure your workspace preferences and billing details.'}
                 </p>
               </div>
-              
+
+              {activeSection === 'projects' && (
+                <button type="button" onClick={openNewProject} className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20 shrink-0">
+                  <Plus className="w-4 h-4" /> New Project
+                </button>
+              )}
+
               {activeSection === 'invoices' && (
                  <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-full bg-white/80 border border-primary-200/60 shadow-sm w-full sm:w-auto">
                     {['all', 'unpaid', 'paid', 'overdue'].map((filter) => (
@@ -459,8 +751,9 @@ export default function AdminDashboard() {
 
             {/* Overview Section  -  real data, modern layout */}
             {activeSection === 'overview' && (
-              <div className="space-y-8 animate-fade-in-up">
-                {/* Stats Grid  -  real metrics from API */}
+              <div className="space-y-6 animate-fade-in-up">
+
+                {/* ── Row 1: 4 primary stat cards ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
                   <StatCard
                     icon={DollarSign}
@@ -490,8 +783,97 @@ export default function AdminDashboard() {
                   />
                 </div>
 
+                {/* ── Row 2: secondary stat strip ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
+                  {/* Collection Rate */}
+                  <div className="admin-card-glass rounded-2xl p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary-50 border border-primary-200/60 flex items-center justify-center shrink-0">
+                      <Target className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary-500 mb-0.5">Collection Rate</p>
+                      {loading ? (
+                        <div className="h-6 w-16 bg-primary-100 rounded animate-pulse" />
+                      ) : (
+                        <>
+                          <p className="text-2xl font-extrabold text-primary-950 tabular-nums">{overviewStats.collectionRate}%</p>
+                          <div className="mt-1.5 h-1.5 bg-primary-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${overviewStats.collectionRate >= 80 ? 'bg-emerald-500' : overviewStats.collectionRate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                              style={{ width: `${overviewStats.collectionRate}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-primary-500 mt-1">{overviewStats.collectionRate >= 80 ? 'Excellent' : overviewStats.collectionRate >= 50 ? 'Moderate' : 'Needs attention'}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Overdue Alert */}
+                  <div className={`rounded-2xl p-5 flex items-center gap-4 border ${overviewStats.overdueCount > 0 ? 'bg-red-50 border-red-200' : 'admin-card-glass border-primary-200/60'}`}>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${overviewStats.overdueCount > 0 ? 'bg-red-100 border border-red-200' : 'bg-primary-50 border border-primary-200/60'}`}>
+                      <AlertCircle className={`w-5 h-5 ${overviewStats.overdueCount > 0 ? 'text-red-600' : 'text-primary-400'}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${overviewStats.overdueCount > 0 ? 'text-red-500' : 'text-primary-500'}`}>Overdue</p>
+                      {loading ? (
+                        <div className="h-6 w-16 bg-primary-100 rounded animate-pulse" />
+                      ) : (
+                        <>
+                          <p className={`text-2xl font-extrabold tabular-nums ${overviewStats.overdueCount > 0 ? 'text-red-700' : 'text-primary-950'}`}>
+                            {overviewStats.overdueCount}
+                          </p>
+                          <p className={`text-[10px] mt-0.5 ${overviewStats.overdueCount > 0 ? 'text-red-600 font-semibold' : 'text-primary-500'}`}>
+                            {overviewStats.overdueCount > 0
+                              ? `Rs. ${overviewStats.overdueRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })} at risk`
+                              : 'No overdue invoices'}
+                          </p>
+                          {overviewStats.overdueCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => { setStatusFilter('overdue'); setActiveSection('invoices'); }}
+                              className="mt-1.5 text-[10px] font-bold text-red-600 hover:text-red-700 underline underline-offset-2"
+                            >
+                              View overdue →
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* This Month */}
+                  <div className="admin-card-glass rounded-2xl p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary-50 border border-primary-200/60 flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary-500 mb-0.5">This Month</p>
+                      {loading ? (
+                        <div className="h-6 w-24 bg-primary-100 rounded animate-pulse" />
+                      ) : (
+                        <>
+                          <p className="text-2xl font-extrabold text-primary-950 tabular-nums truncate">
+                            Rs. {overviewStats.thisMonthRevenue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-[10px] text-primary-500">{overviewStats.thisMonthCount} invoice{overviewStats.thisMonthCount !== 1 ? 's' : ''}</p>
+                            {overviewStats.monthGrowth !== null && (
+                              <span className={`text-[10px] font-bold flex items-center gap-0.5 ${overviewStats.monthGrowth >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {overviewStats.monthGrowth >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                {Math.abs(overviewStats.monthGrowth)}% vs last month
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Row 3: Recent Activity | Billing Health ── */}
                 <div className="grid lg:grid-cols-3 gap-6">
-                  {/* Recent Activity  -  real invoice list */}
+                  {/* Recent Activity */}
                   <div className="lg:col-span-2 admin-card-glass rounded-2xl overflow-hidden flex flex-col min-h-[280px] sm:min-h-[320px]">
                     <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-primary-100 flex items-center justify-between gap-2 flex-wrap">
                       <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
@@ -502,7 +884,6 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={() => setActiveSection('invoices')}
                         className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors py-2 px-3 -my-2 -mx-3 rounded-lg touch-manipulation active:bg-primary-50"
-                        aria-label="View all invoices"
                       >
                         View all <ArrowRight className="w-4 h-4" />
                       </button>
@@ -529,11 +910,10 @@ export default function AdminDashboard() {
                         </div>
                       ) : (
                         <>
-                          {/* Mobile: card list */}
                           <div className="md:hidden overflow-y-auto admin-scroll px-4 pb-4">
                             <ul className="space-y-3">
                               {invoices.slice(0, 5).map((inv) => (
-                                <li key={inv._id} className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm active:bg-primary-50/30 transition-colors">
+                                <li key={inv._id} className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
                                       <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shrink-0">
@@ -549,15 +929,11 @@ export default function AdminDashboard() {
                                       <StatusPill status={inv.status} />
                                     </div>
                                   </div>
-                                  <p className="text-xs text-primary-600 mt-2 pt-2 border-t border-primary-100">
-                                    {new Date(inv.invoiceDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}
-                                  </p>
                                 </li>
                               ))}
                             </ul>
                           </div>
-                          {/* Desktop: table */}
-                          <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0 admin-scroll">
+                          <div className="hidden md:block overflow-x-auto admin-scroll">
                             <table className="w-full min-w-[400px] text-left text-sm">
                               <thead className="bg-primary-50/50 border-b border-primary-100">
                                 <tr>
@@ -600,51 +976,78 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Billing Health  -  real pending % from data */}
+                  {/* Billing Health — fully data-driven */}
                   <div className="bg-primary-900 text-white rounded-2xl p-6 shadow-xl shadow-primary-900/20 relative overflow-hidden flex flex-col min-h-[320px] border border-primary-800/50">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-primary-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
                     <div className="relative z-10 flex flex-col flex-1">
                       <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center mb-4 border border-white/10">
-                        <TrendingUp className="w-5 h-5 text-primary-300" />
+                        <ShieldCheck className="w-5 h-5 text-primary-300" />
                       </div>
                       <h3 className="text-lg font-bold text-white mb-1">Billing Health</h3>
                       {loading ? (
-                        <p className="text-primary-200 text-sm mb-4">Loading…</p>
+                        <p className="text-primary-200 text-sm">Loading…</p>
+                      ) : overviewStats.totalRevenue === 0 ? (
+                        <p className="text-primary-300 text-sm">No revenue yet. Create invoices to see your billing health score here.</p>
                       ) : (
                         <>
-                          <p className="text-primary-200 text-sm mb-4">
-                            {overviewStats.totalRevenue === 0
-                              ? 'No revenue yet. Create invoices to see your billing health here.'
-                              : overviewStats.pendingPercentage <= 20
-                                ? 'Your pending revenue is within a healthy range. Keep it under 20% for strong cash flow.'
-                                : `${overviewStats.pendingPercentage}% of revenue is pending. Aim for under 20% for healthier cash flow.`}
-                          </p>
-                          {overviewStats.totalRevenue > 0 && (
-                            <div className="mb-5">
-                              <div className="flex justify-between text-xs text-primary-300 mb-1">
-                                <span>Pending share</span>
-                                <span className="font-semibold text-white">{overviewStats.pendingPercentage}%</span>
-                              </div>
-                              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-primary-400 rounded-full transition-all duration-500"
-                                  style={{ width: `${Math.min(overviewStats.pendingPercentage, 100)}%` }}
-                                />
-                              </div>
+                          {/* Score badge */}
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className={`text-3xl font-black tabular-nums ${overviewStats.collectionRate >= 80 ? 'text-emerald-400' : overviewStats.collectionRate >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                              {overviewStats.collectionRate}%
                             </div>
-                          )}
-                          <ul className="space-y-2.5 text-sm text-primary-200 flex-1">
-                            <li className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0" />
-                              Use early payment discounts
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0" />
-                              Follow up on overdue invoices
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0" />
-                              Reconcile weekly
+                            <div>
+                              <p className={`text-xs font-bold uppercase tracking-wider ${overviewStats.collectionRate >= 80 ? 'text-emerald-400' : overviewStats.collectionRate >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                                {overviewStats.collectionRate >= 80 ? 'Excellent' : overviewStats.collectionRate >= 50 ? 'Moderate' : 'Poor'}
+                              </p>
+                              <p className="text-primary-300 text-xs">Collection rate</p>
+                            </div>
+                          </div>
+
+                          {/* Pending bar */}
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-primary-300 mb-1.5">
+                              <span>Pending share</span>
+                              <span className={`font-bold ${overviewStats.pendingPercentage <= 20 ? 'text-emerald-400' : overviewStats.pendingPercentage <= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                                {overviewStats.pendingPercentage}%
+                              </span>
+                            </div>
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${overviewStats.pendingPercentage <= 20 ? 'bg-emerald-400' : overviewStats.pendingPercentage <= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                style={{ width: `${Math.min(overviewStats.pendingPercentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Dynamic action tips */}
+                          <ul className="space-y-2 text-sm flex-1">
+                            {overviewStats.overdueCount > 0 && (
+                              <li className="flex items-start gap-2 text-red-300">
+                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span>{overviewStats.overdueCount} overdue invoice{overviewStats.overdueCount > 1 ? 's' : ''} — follow up now</span>
+                              </li>
+                            )}
+                            {overviewStats.pendingPercentage > 20 && (
+                              <li className="flex items-start gap-2 text-amber-300">
+                                <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span>Pending is {overviewStats.pendingPercentage}% — aim for under 20%</span>
+                              </li>
+                            )}
+                            {overviewStats.collectionRate < 80 && (
+                              <li className="flex items-start gap-2 text-primary-300">
+                                <Zap className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span>Offer early payment discounts to improve collection</span>
+                              </li>
+                            )}
+                            {overviewStats.collectionRate >= 80 && overviewStats.overdueCount === 0 && (
+                              <li className="flex items-start gap-2 text-emerald-300">
+                                <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span>Cash flow is healthy — keep it up!</span>
+                              </li>
+                            )}
+                            <li className="flex items-start gap-2 text-primary-300">
+                              <RefreshCw className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span>Reconcile accounts weekly</span>
                             </li>
                           </ul>
                         </>
@@ -652,6 +1055,212 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* ── Row 4: Monthly Revenue Chart | Top Clients | Quick Actions ── */}
+                <div className="grid lg:grid-cols-3 gap-6">
+
+                  {/* Monthly Revenue Bar Chart */}
+                  <div className="lg:col-span-2 admin-card-glass rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-primary-100 flex items-center gap-2">
+                      <BarChart2 className="w-5 h-5 text-primary-500" />
+                      <h2 className="text-base font-bold text-primary-950">Revenue — Last 6 Months</h2>
+                    </div>
+                    <div className="px-5 py-5">
+                      {loading ? (
+                        <div className="flex items-end gap-3 h-32">
+                          {[60, 80, 45, 90, 70, 55].map((h, i) => (
+                            <div key={i} className="flex-1 bg-primary-100 rounded-t-lg animate-pulse" style={{ height: `${h}%` }} />
+                          ))}
+                        </div>
+                      ) : overviewStats.maxMonthlyRevenue === 1 ? (
+                        <div className="flex items-center justify-center h-32 text-primary-400 text-sm">No invoice data yet</div>
+                      ) : (
+                        <div className="flex items-end gap-2 sm:gap-3 h-36">
+                          {overviewStats.monthlyData.map((m, i) => {
+                            const heightPct = overviewStats.maxMonthlyRevenue > 0 ? (m.revenue / overviewStats.maxMonthlyRevenue) * 100 : 0;
+                            const isCurrentMonth = i === overviewStats.monthlyData.length - 1;
+                            return (
+                              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 group">
+                                <div className="w-full flex flex-col justify-end" style={{ height: '120px' }}>
+                                  <div
+                                    className={`w-full rounded-t-lg transition-all duration-700 ${isCurrentMonth ? 'bg-primary-600' : 'bg-primary-200 group-hover:bg-primary-300'}`}
+                                    style={{ height: `${Math.max(heightPct, m.revenue > 0 ? 4 : 0)}%` }}
+                                    title={`Rs. ${m.revenue.toLocaleString('en-IN')}`}
+                                  />
+                                </div>
+                                <span className={`text-[10px] font-semibold whitespace-nowrap ${isCurrentMonth ? 'text-primary-700' : 'text-primary-400'}`}>{m.label}</span>
+                                {m.revenue > 0 && (
+                                  <span className="text-[9px] text-primary-500 tabular-nums hidden sm:block">
+                                    {m.revenue >= 100000
+                                      ? `${(m.revenue / 100000).toFixed(1)}L`
+                                      : m.revenue >= 1000
+                                        ? `${(m.revenue / 1000).toFixed(1)}K`
+                                        : m.revenue.toString()}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Top Clients */}
+                  <div className="admin-card-glass rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-primary-100 flex items-center justify-between gap-2">
+                      <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-primary-500" />
+                        Top Clients
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('clients')}
+                        className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                      >
+                        All <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="px-5 py-4">
+                      {loading ? (
+                        <div className="space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-primary-100 animate-pulse shrink-0" />
+                              <div className="flex-1 space-y-1.5">
+                                <div className="h-3 bg-primary-100 rounded animate-pulse w-3/4" />
+                                <div className="h-2 bg-primary-100 rounded animate-pulse w-1/2" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : overviewStats.topClients.length === 0 ? (
+                        <p className="text-sm text-primary-400 text-center py-6">No clients yet</p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {overviewStats.topClients.map((client, i) => {
+                            const shareWidth = overviewStats.totalRevenue > 0 ? (client.total / overviewStats.totalRevenue) * 100 : 0;
+                            return (
+                              <li key={client.name} className="flex items-center gap-3 group">
+                                <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                  {i + 1}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <p className="font-semibold text-primary-950 text-sm truncate">{client.name}</p>
+                                    <p className="text-xs font-bold text-primary-700 tabular-nums shrink-0">
+                                      Rs. {client.total >= 100000 ? `${(client.total / 100000).toFixed(1)}L` : client.total >= 1000 ? `${(client.total / 1000).toFixed(1)}K` : client.total.toFixed(0)}
+                                    </p>
+                                  </div>
+                                  <div className="h-1 bg-primary-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary-500 rounded-full" style={{ width: `${shareWidth}%` }} />
+                                  </div>
+                                  <p className="text-[10px] text-primary-400 mt-0.5">{client.count} invoice{client.count !== 1 ? 's' : ''} · {Math.round(shareWidth)}% of total</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Row 5: Invoice Aging + Quick Actions ── */}
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Invoice Aging Report */}
+                  <div className="lg:col-span-2 admin-card-glass rounded-2xl p-5 sm:p-6">
+                    <h2 className="text-base font-bold text-primary-950 flex items-center gap-2 mb-4">
+                      <Clock className="w-5 h-5 text-primary-500" />
+                      Invoice Aging (Unpaid / Overdue)
+                      {overviewStats.disputedCount > 0 && (
+                        <span className="ml-auto text-xs font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                          <Flag className="w-3 h-3" />{overviewStats.disputedCount} Dispute{overviewStats.disputedCount > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </h2>
+                    <div className="space-y-3">
+                      {overviewStats.agingBuckets.map(({ range, count, amount }) => {
+                        const maxCount = Math.max(...overviewStats.agingBuckets.map((b) => b.count), 1);
+                        const tone = range === '0–30d' ? 'bg-amber-400' : range === '31–60d' ? 'bg-orange-500' : 'bg-red-500';
+                        return (
+                          <div key={range} className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-slate-500 w-16 shrink-0">{range}</span>
+                            <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
+                              <div className={`h-full ${tone} rounded-lg transition-all duration-700`} style={{ width: `${count > 0 ? Math.max((count / maxCount) * 100, 6) : 0}%` }} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700 w-6 text-right">{count}</span>
+                            <span className="text-xs text-slate-500 w-28 text-right tabular-nums">Rs. {amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                          </div>
+                        );
+                      })}
+                      {overviewStats.agingBuckets.every((b) => b.count === 0) && (
+                        <p className="text-sm text-emerald-600 font-semibold flex items-center gap-2"><CheckCircle className="w-4 h-4" />No aging receivables — great job!</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="admin-card-glass rounded-2xl p-5 sm:p-6">
+                  <h2 className="text-base font-bold text-primary-950 flex items-center gap-2 mb-4">
+                    <Zap className="w-5 h-5 text-primary-500" />
+                    Quick Actions
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('create')}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-primary-600 text-white flex items-center justify-center group-hover:bg-primary-700 transition-colors">
+                        <FilePlus className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary-800">New Invoice</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('clients')}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white border border-primary-200 text-primary-600 flex items-center justify-center group-hover:border-primary-300 transition-colors">
+                        <UserPlus className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary-800">Add Client</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setStatusFilter('overdue'); setActiveSection('invoices'); }}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white border border-primary-200 text-primary-600 flex items-center justify-center group-hover:border-primary-300 transition-colors">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary-800">Overdue</span>
+                      {overviewStats.overdueCount > 0 && (
+                        <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full -mt-1">
+                          {overviewStats.overdueCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setStatusFilter('unpaid'); setActiveSection('invoices'); }}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-primary-200 bg-primary-50 hover:bg-primary-100 hover:border-primary-300 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white border border-primary-200 text-primary-600 flex items-center justify-center group-hover:border-primary-300 transition-colors">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-primary-800">Unpaid</span>
+                      {overviewStats.unpaidCount > 0 && (
+                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full -mt-1">
+                          {overviewStats.unpaidCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -708,20 +1317,23 @@ export default function AdminDashboard() {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Link to portal client (optional)</label>
-                          <select
-                            value={invoiceClientEmail}
-                            onChange={(e) => {
-                              setInvoiceClientEmail(e.target.value);
-                              const c = clients.find((x) => x.email === e.target.value);
-                              if (c && c.name && !clientName) setClientName(c.name);
-                            }}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
-                          >
-                            <option value="">— None —</option>
-                            {clients.map((c) => (
-                              <option key={c._id || c.id} value={c.email}>{c.name || c.email}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <select
+                              value={invoiceClientEmail}
+                              onChange={(e) => {
+                                setInvoiceClientEmail(e.target.value);
+                                const c = clients.find((x) => x.email === e.target.value);
+                                if (c && c.name && !clientName) setClientName(c.name);
+                              }}
+                              className="w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base cursor-pointer"
+                            >
+                              <option value="">— None —</option>
+                              {clients.map((c) => (
+                                <option key={c._id || c.id} value={c.email}>{c.name || c.email}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
                           <p className="text-[10px] text-slate-500 ml-1">Shows this invoice under that client in Clients.</p>
                         </div>
                         <div className="space-y-2">
@@ -736,17 +1348,139 @@ export default function AdminDashboard() {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Status</label>
-                          <select
-                            value={invoiceStatus}
-                            onChange={(e) => setInvoiceStatus(e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
-                          >
-                            <option value="unpaid">Unpaid</option>
-                            <option value="paid">Paid</option>
-                            <option value="overdue">Overdue</option>
-                          </select>
+                          <div className="relative">
+                            <select
+                              value={invoiceStatus}
+                              onChange={(e) => setInvoiceStatus(e.target.value)}
+                              className="w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base cursor-pointer"
+                            >
+                              <option value="unpaid">Unpaid</option>
+                              <option value="paid">Paid</option>
+                              <option value="overdue">Overdue</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
                           <p className="text-[10px] text-slate-500 ml-1">Payment status for this invoice.</p>
                         </div>
+
+                        {/* Payment Terms */}
+                        <div className="space-y-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowPaymentTerms((p) => !p)}
+                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-primary-50 hover:border-primary-300 transition-all"
+                          >
+                            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                              <CreditCard className="w-4 h-4 text-primary-500" />
+                              Payment Terms
+                              {paymentTerms.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold">{paymentTerms.length} installment{paymentTerms.length > 1 ? 's' : ''}</span>
+                              )}
+                            </span>
+                            <ChevronUp className={`w-4 h-4 text-slate-400 transition-transform ${showPaymentTerms ? '' : 'rotate-180'}`} />
+                          </button>
+
+                          {showPaymentTerms && (
+                            <div className="space-y-4 px-1">
+                              {/* Preset buttons */}
+                              <div className="space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Quick Presets</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {PAYMENT_PRESETS.map((preset) => (
+                                    <button
+                                      key={preset.label}
+                                      type="button"
+                                      onClick={() => applyPreset(preset)}
+                                      className="px-3 py-1.5 rounded-lg bg-primary-50 border border-primary-200 text-primary-700 text-xs font-bold hover:bg-primary-100 hover:border-primary-300 transition-colors"
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Term rows */}
+                              {paymentTerms.length > 0 && (
+                                <div className="space-y-2">
+                                  {/* Header */}
+                                  <div className="hidden sm:grid grid-cols-12 gap-2 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    <div className="col-span-4">Label</div>
+                                    <div className="col-span-3 text-center">%</div>
+                                    <div className="col-span-4">Due Date</div>
+                                    <div className="col-span-1" />
+                                  </div>
+                                  {paymentTerms.map((term, i) => {
+                                    const amt = totals.total * (Number(term.percentage) || 0) / 100;
+                                    return (
+                                      <div key={i} className="grid grid-cols-12 gap-2 items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                                        <div className="col-span-12 sm:col-span-4">
+                                          <input
+                                            type="text"
+                                            value={term.label}
+                                            onChange={(e) => handleTermChange(i, 'label', e.target.value)}
+                                            placeholder={`Installment ${i + 1}`}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium"
+                                          />
+                                        </div>
+                                        <div className="col-span-5 sm:col-span-3">
+                                          <div className="relative">
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="100"
+                                              value={term.percentage}
+                                              onChange={(e) => handleTermChange(i, 'percentage', e.target.value)}
+                                              placeholder="0"
+                                              className="w-full px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium text-center tabular-nums"
+                                            />
+                                            <Percent className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                          </div>
+                                          {totals.total > 0 && (
+                                            <p className="text-[10px] text-primary-600 font-semibold mt-1 text-center tabular-nums">
+                                              Rs. {amt.toFixed(2)}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="col-span-5 sm:col-span-4">
+                                          <input
+                                            type="date"
+                                            value={term.dueDate}
+                                            onChange={(e) => handleTermChange(i, 'dueDate', e.target.value)}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium"
+                                          />
+                                        </div>
+                                        <div className="col-span-2 sm:col-span-1 flex justify-end">
+                                          <button
+                                            type="button"
+                                            onClick={() => removePaymentTerm(i)}
+                                            className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {/* Total percentage indicator */}
+                                  <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold ${termsTotalPct === 100 ? 'bg-green-50 text-green-700 border border-green-200' : termsTotalPct > 100 ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                    <span>Total: {termsTotalPct}%</span>
+                                    {termsTotalPct === 100 ? <span>✓ Balanced</span> : termsTotalPct > 100 ? <span>Over by {termsTotalPct - 100}%</span> : <span>{100 - termsTotalPct}% remaining</span>}
+                                  </div>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={addPaymentTerm}
+                                className="flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-2 rounded-lg border border-primary-200/60 transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Add Installment
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Issued</label>
@@ -1049,12 +1783,29 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-center">
-                              <div className="inline-flex justify-center">
+                              <div className="inline-flex flex-col items-center gap-1">
                                 <StatusPill status={inv.status} />
+                                {inv.dispute?.flagged && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                    <Flag className="w-2.5 h-2.5" />Dispute
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-right">
                               <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleDownloadInvoicePdf(inv)}
+                                  disabled={downloadingInvId === inv._id}
+                                  className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Download PDF"
+                                >
+                                  {downloadingInvId === inv._id ? (
+                                    <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                                  ) : (
+                                    <Download className="w-4 h-4" />
+                                  )}
+                                </button>
                                 <div className="relative group/dropdown">
                                   <select
                                     value={inv.status}
@@ -1281,32 +2032,38 @@ export default function AdminDashboard() {
                           <tr>
                             <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Client</th>
                             <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Login (Email)</th>
-                            <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Username format</th>
                             <th className="px-4 sm:px-6 py-3 font-semibold text-primary-700 text-xs uppercase tracking-wider">Password</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-primary-100/50">
                           {clients.map((c) => {
-                            const slug = (c.name || c.email || '')
-                              .toString()
-                              .toLowerCase()
-                              .trim()
-                              .replace(/\s+/g, '-')
-                              .replace(/[^a-z0-9-]/g, '');
-                            const usernameFormat = slug ? `${slug}@${new Date().getFullYear()}` : '—';
                             const isNewlyCreated = createdCredentials && createdCredentials.email === c.email;
+                            const sessionPwd = sessionPasswords[c.email];
                             return (
                               <tr key={c._id || c.id} className={`transition-colors ${isNewlyCreated ? 'bg-primary-50/50' : 'hover:bg-primary-50/30'}`}>
                                 <td className="px-4 sm:px-6 py-3 font-medium text-primary-900">{c.name || '-'}</td>
                                 <td className="px-4 sm:px-6 py-3">
                                   <code className="px-2 py-1 rounded bg-white border border-primary-200 text-primary-800 text-xs font-mono">{c.email}</code>
                                 </td>
-                                <td className="px-4 sm:px-6 py-3 text-primary-700 font-mono text-xs">{usernameFormat}</td>
                                 <td className="px-4 sm:px-6 py-3">
-                                  {isNewlyCreated && createdCredentials?.temporaryPassword ? (
+                                  {sessionPwd ? (
                                     <span className="flex items-center gap-2">
-                                      <code className="px-2 py-1 rounded bg-white border border-primary-300 text-primary-800 text-xs font-mono">{createdCredentials.temporaryPassword}</code>
-                                      <button type="button" onClick={() => copyToClipboard(createdCredentials.temporaryPassword)} className="p-1.5 rounded-lg hover:bg-primary-100 text-primary-600" title="Copy password">
+                                      <code className="px-2 py-1 rounded bg-white border border-primary-300 text-primary-800 text-xs font-mono tracking-wider">
+                                        {visiblePasswords.has(c.email) ? sessionPwd : '••••••••'}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => setVisiblePasswords((prev) => {
+                                          const next = new Set(prev);
+                                          next.has(c.email) ? next.delete(c.email) : next.add(c.email);
+                                          return next;
+                                        })}
+                                        className="p-1.5 rounded-lg hover:bg-primary-100 text-primary-500 hover:text-primary-700 transition-colors"
+                                        title={visiblePasswords.has(c.email) ? 'Hide password' : 'Show password'}
+                                      >
+                                        {visiblePasswords.has(c.email) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                      </button>
+                                      <button type="button" onClick={() => copyToClipboard(sessionPwd)} className="p-1.5 rounded-lg hover:bg-primary-100 text-primary-600 transition-colors" title="Copy password">
                                         <Copy className="w-4 h-4" />
                                       </button>
                                     </span>
@@ -1325,24 +2082,279 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Empty state for Settings */}
-            {activeSection === 'settings' && (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] admin-card-glass rounded-2xl animate-fade-in-up">
-                 <div className="w-24 h-24 bg-primary-50 rounded-full flex items-center justify-center mb-6">
-                    <Settings className="w-10 h-10 text-primary-500" />
-                 </div>
-                 <h2 className="text-2xl font-bold text-primary-950 mb-2">Coming Soon</h2>
-                 <p className="text-primary-700/80 max-w-md text-center mb-8">
-                   We are working hard to bring you advanced settings management features. Stay tuned for updates!
-                 </p>
-                 <button 
-                   onClick={() => setActiveSection('overview')}
-                   className="px-6 py-2.5 rounded-full border border-primary-200 text-primary-700 font-semibold hover:bg-primary-50 transition-all"
-                 >
-                   Back to Dashboard
-                 </button>
+            {/* ── Projects ── */}
+            {activeSection === 'projects' && (
+              <div className="space-y-6 animate-fade-in-up">
+                {showProjectForm && (
+                  <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60">
+                    <h2 className="text-base font-bold text-primary-950 mb-5 flex items-center gap-2">
+                      <FolderKanban className="w-5 h-5 text-primary-500" />
+                      {editingProject ? 'Edit Project' : 'New Project'}
+                    </h2>
+                    <form onSubmit={handleSaveProject} className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Title *</label>
+                          <input value={projectForm.title} onChange={(e) => setProjectForm((p) => ({ ...p, title: e.target.value }))} placeholder="Project title" required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" />
+                        </div>
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Description</label>
+                          <textarea value={projectForm.description} onChange={(e) => setProjectForm((p) => ({ ...p, description: e.target.value }))} rows={2} placeholder="Brief description…" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Client Email</label>
+                          <div className="relative">
+                            <select value={projectForm.clientEmail} onChange={(e) => { const c = clients.find((x) => x.email === e.target.value); setProjectForm((p) => ({ ...p, clientEmail: e.target.value, clientName: c?.name || p.clientName })); }} className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none font-medium text-slate-900">
+                              <option value="">— Unassigned —</option>
+                              {clients.map((c) => <option key={c._id} value={c.email}>{c.name || c.email}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</label>
+                          <div className="relative">
+                            <select value={projectForm.status} onChange={(e) => setProjectForm((p) => ({ ...p, status: e.target.value }))} className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none font-medium text-slate-900">
+                              {['planning', 'in-progress', 'review', 'completed', 'on-hold'].map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Progress ({projectForm.progress}%)</label>
+                          <input type="range" min={0} max={100} value={projectForm.progress} onChange={(e) => setProjectForm((p) => ({ ...p, progress: Number(e.target.value) }))} className="w-full accent-primary-600" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Start Date</label>
+                            <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((p) => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Due Date</label>
+                            <input type="date" value={projectForm.dueDate} onChange={(e) => setProjectForm((p) => ({ ...p, dueDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium" />
+                          </div>
+                        </div>
+                        {/* Milestones */}
+                        <div className="sm:col-span-2 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Milestones</label>
+                            <button type="button" onClick={() => setProjectForm((p) => ({ ...p, milestones: [...p.milestones, { title: '', completed: false, dueDate: '' }] }))} className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                              <Plus className="w-3 h-3" /> Add
+                            </button>
+                          </div>
+                          {projectForm.milestones.map((m, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <button type="button" onClick={() => toggleMilestone(i)} className="shrink-0 text-primary-500">{m.completed ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}</button>
+                              <input value={m.title} onChange={(e) => setProjectForm((p) => ({ ...p, milestones: p.milestones.map((x, j) => j === i ? { ...x, title: e.target.value } : x) }))} placeholder="Milestone title" className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm font-medium outline-none focus:border-primary-400" />
+                              <input type="date" value={m.dueDate} onChange={(e) => setProjectForm((p) => ({ ...p, milestones: p.milestones.map((x, j) => j === i ? { ...x, dueDate: e.target.value } : x) }))} className="w-32 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs outline-none focus:border-primary-400" />
+                              <button type="button" onClick={() => setProjectForm((p) => ({ ...p, milestones: p.milestones.filter((_, j) => j !== i) }))} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {projectError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{projectError}</p>}
+                      <div className="flex gap-3 pt-2">
+                        <button type="submit" disabled={projectSaving} className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 text-sm flex items-center gap-2">
+                          {projectSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                          {editingProject ? 'Save Changes' : 'Create Project'}
+                        </button>
+                        <button type="button" onClick={() => { setShowProjectForm(false); setEditingProject(null); }} className="px-5 py-2.5 rounded-xl border border-primary-200 text-primary-700 font-semibold hover:bg-primary-50 text-sm">Cancel</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {projectsLoading ? (
+                  <div className="admin-card-glass rounded-2xl flex items-center justify-center py-16"><div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>
+                ) : projects.length === 0 && !showProjectForm ? (
+                  <div className="admin-card-glass rounded-2xl flex flex-col items-center justify-center py-20 text-center px-4">
+                    <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-6"><FolderKanban className="w-10 h-10 text-primary-400" /></div>
+                    <h3 className="text-xl font-bold text-primary-950 mb-2">No projects yet</h3>
+                    <p className="text-primary-700/80 max-w-sm mb-6">Create your first project and assign it to a client.</p>
+                    <button type="button" onClick={openNewProject} className="px-6 py-3 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 shadow-lg shadow-primary-500/25">Create Project</button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {projects.map((p) => {
+                      const statusColors = { planning: 'bg-slate-100 text-slate-700 border-slate-200', 'in-progress': 'bg-blue-50 text-blue-700 border-blue-200', review: 'bg-amber-50 text-amber-700 border-amber-200', completed: 'bg-emerald-50 text-emerald-700 border-emerald-200', 'on-hold': 'bg-red-50 text-red-700 border-red-200' };
+                      const completedMilestones = (p.milestones || []).filter((m) => m.completed).length;
+                      return (
+                        <div key={p._id} className="admin-card-glass rounded-2xl p-5 sm:p-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 flex-wrap mb-1">
+                                <h3 className="font-bold text-primary-950 text-base">{p.title}</h3>
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border capitalize ${statusColors[p.status] || statusColors.planning}`}>{p.status}</span>
+                              </div>
+                              {p.description && <p className="text-sm text-primary-600/80 mb-2">{p.description}</p>}
+                              <div className="flex items-center gap-4 flex-wrap text-xs text-primary-500">
+                                {p.clientEmail && <span className="flex items-center gap-1"><User className="w-3 h-3" />{p.clientName || p.clientEmail}</span>}
+                                {p.dueDate && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Due {new Date(p.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}</span>}
+                                {p.milestones?.length > 0 && <span>{completedMilestones}/{p.milestones.length} milestones</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button type="button" onClick={() => openEditProject(p)} className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"><Edit3 className="w-4 h-4" /></button>
+                              <button type="button" onClick={() => handleDeleteProject(p._id)} className="p-2 rounded-lg text-red-400 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <div className="flex justify-between text-xs text-primary-500 mb-1.5">
+                              <span>Progress</span><span className="font-bold text-primary-700">{p.progress}%</span>
+                            </div>
+                            <div className="h-2 bg-primary-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-700 ${p.progress === 100 ? 'bg-emerald-500' : 'bg-primary-500'}`} style={{ width: `${p.progress}%` }} />
+                            </div>
+                          </div>
+                          {p.milestones?.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {p.milestones.map((m, i) => (
+                                <span key={i} className={`text-xs px-2.5 py-1 rounded-full border flex items-center gap-1 ${m.completed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                  {m.completed ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />} {m.title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* ── Announcements ── */}
+            {activeSection === 'announcements' && (
+              <div className="space-y-6 animate-fade-in-up">
+                {/* Create form */}
+                <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60">
+                  <h2 className="text-base font-bold text-primary-950 mb-5 flex items-center gap-2"><Megaphone className="w-5 h-5 text-primary-500" />Post Announcement</h2>
+                  <form onSubmit={handleCreateAnnouncement} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Title *</label>
+                      <input value={annForm.title} onChange={(e) => setAnnForm((p) => ({ ...p, title: e.target.value }))} placeholder="Announcement title" required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Content *</label>
+                      <textarea value={annForm.content} onChange={(e) => setAnnForm((p) => ({ ...p, content: e.target.value }))} rows={3} placeholder="Write your announcement…" required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm font-medium text-primary-700 cursor-pointer">
+                        <input type="checkbox" checked={annForm.pinned} onChange={(e) => setAnnForm((p) => ({ ...p, pinned: e.target.checked }))} className="w-4 h-4 accent-primary-600" />
+                        Pin to top
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Audience:</label>
+                        <div className="relative">
+                          <select value={annForm.audience} onChange={(e) => setAnnForm((p) => ({ ...p, audience: e.target.value }))} className="appearance-none px-3 py-1.5 pr-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-medium text-slate-900 outline-none focus:border-primary-500">
+                            <option value="all">All Clients</option>
+                            {clients.map((c) => <option key={c._id} value={c.email}>{c.name || c.email}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+                    {annError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{annError}</p>}
+                    <button type="submit" disabled={annSaving} className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 text-sm flex items-center gap-2">
+                      {annSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-4 h-4" />}
+                      Post Announcement
+                    </button>
+                  </form>
+                </div>
+
+                {/* List */}
+                {announcementsLoading ? (
+                  <div className="admin-card-glass rounded-2xl flex items-center justify-center py-12"><div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>
+                ) : announcements.length === 0 ? (
+                  <div className="admin-card-glass rounded-2xl flex flex-col items-center justify-center py-16 text-center px-4">
+                    <Megaphone className="w-12 h-12 text-primary-300 mb-4" />
+                    <p className="font-semibold text-primary-950 text-lg">No announcements yet</p>
+                    <p className="text-primary-600/70 text-sm mt-1">Post your first announcement above.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {announcements.map((a) => (
+                      <div key={a._id} className={`admin-card-glass rounded-2xl p-5 border ${a.pinned ? 'border-primary-300 bg-primary-50/30' : 'border-primary-100'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              {a.pinned && <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Pin className="w-2.5 h-2.5" />Pinned</span>}
+                              {a.audience !== 'all' && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Private: {a.audience}</span>}
+                              <h3 className="font-bold text-primary-950">{a.title}</h3>
+                            </div>
+                            <p className="text-sm text-primary-700/80 mt-1 whitespace-pre-wrap">{a.content}</p>
+                            <p className="text-xs text-primary-400 mt-2">{new Date(a.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <button type="button" onClick={() => handleDeleteAnnouncement(a._id)} className="p-2 rounded-lg text-red-400 hover:bg-red-50 transition-colors shrink-0"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Settings Section */}
+            {activeSection === 'settings' && (
+              <div className="space-y-6 animate-fade-in-up max-w-lg">
+                {/* Change Password */}
+                <div className="admin-card-glass rounded-2xl p-5 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-primary-100">
+                    <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-primary-950">Change Password</h2>
+                      <p className="text-xs text-primary-500 mt-0.5">Update your admin account password</p>
+                    </div>
+                  </div>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Current Password</label>
+                      <input type="password" value={changePwForm.currentPassword} onChange={(e) => setChangePwForm((p) => ({ ...p, currentPassword: e.target.value }))} required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" placeholder="Enter current password" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">New Password</label>
+                      <input type="password" value={changePwForm.newPassword} onChange={(e) => setChangePwForm((p) => ({ ...p, newPassword: e.target.value }))} required minLength={8} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" placeholder="Min 8 characters" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm New Password</label>
+                      <input type="password" value={changePwForm.confirmPassword} onChange={(e) => setChangePwForm((p) => ({ ...p, confirmPassword: e.target.value }))} required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" placeholder="Repeat new password" />
+                    </div>
+                    {changePwError && <p className="text-sm text-red-600 flex items-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" />{changePwError}</p>}
+                    {changePwSuccess && <p className="text-sm text-emerald-600 flex items-center gap-2"><CheckCircle className="w-4 h-4 shrink-0" />{changePwSuccess}</p>}
+                    <button type="submit" disabled={changePwLoading} className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                      {changePwLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Lock className="w-4 h-4" />}
+                      Change Password
+                    </button>
+                  </form>
+                </div>
+
+                {/* Account Info card */}
+                <div className="admin-card-glass rounded-2xl p-5 sm:p-8">
+                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-primary-100">
+                    <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-primary-950">Account Info</h2>
+                      <p className="text-xs text-primary-500 mt-0.5">Your admin account details</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between py-2 border-b border-primary-50">
+                      <span className="text-slate-500 font-medium">Role</span>
+                      <span className="font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-full text-xs uppercase tracking-wider">Admin</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-slate-500 font-medium">Total Invoices</span>
+                      <span className="font-bold text-primary-950">{invoices.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
           </div>
         </main>

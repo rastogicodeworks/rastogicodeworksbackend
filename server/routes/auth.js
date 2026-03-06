@@ -81,13 +81,54 @@ authRouter.post('/logout', (req, res) => {
 });
 
 // GET /api/auth/me — current user (admin or client)
-authRouter.get('/me', requireAuth, (req, res) => {
-  return res.json({
-    success: true,
-    user: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role,
-    },
-  });
+authRouter.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name email role').lean();
+    return res.json({
+      success: true,
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role,
+        name: user?.name || '',
+      },
+    });
+  } catch {
+    return res.json({ success: true, user: { id: req.user.id, email: req.user.email, role: req.user.role } });
+  }
+});
+
+// PATCH /api/auth/profile — update name
+authRouter.patch('/profile', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ success: false, message: 'Name is required.' });
+    const user = await User.findByIdAndUpdate(req.user.id, { name: name.trim() }, { new: true }).select('name email role').lean();
+    return res.json({ success: true, user: { id: user._id, email: user.email, role: user.role, name: user.name } });
+  } catch (err) {
+    console.error('[auth/profile]', err);
+    return res.status(500).json({ success: false, message: 'Failed to update profile.' });
+  }
+});
+
+// PATCH /api/auth/change-password — change own password
+authRouter.patch('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) return res.status(400).json({ success: false, message: 'Both current and new password are required.' });
+    if (newPassword.length < 8) return res.status(400).json({ success: false, message: 'New password must be at least 8 characters.' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+
+    user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await user.save();
+    return res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    console.error('[auth/change-password]', err);
+    return res.status(500).json({ success: false, message: 'Failed to change password.' });
+  }
 });

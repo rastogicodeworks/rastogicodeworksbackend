@@ -8,7 +8,7 @@ const founder = {
   focus: 'Leading Rastogi Codeworks with a focus on building reliable software, transparent client relationships, and a team that ships with confidence. Passionate about turning ideas into products that move businesses forward.',
   initials: 'VR',
   linkedin: 'https://www.linkedin.com/in/vasu-rastogi',
-  whatsapp: 'https://wa.me/919876543210',
+  whatsapp: 'https://wa.me/918859985607',
   phone: 'tel:+918859985607',
   email: `mailto:rastogicodeworks@gmail.com?subject=${encodeURIComponent('Hello from your website')}&body=${encodeURIComponent('Hey,\n\nI am reaching out from your website. I would like to connect with Rastogi Codeworks.\n\nBest regards')}`,
 };
@@ -57,14 +57,15 @@ export default function Team() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/30 overflow-hidden hover:shadow-2xl hover:shadow-slate-200/40 transition-shadow duration-300">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
-              {/* Avatar / visual */}
-              <div className="md:col-span-2 bg-gradient-to-br from-primary-50 via-primary-50/90 to-primary-100/70 flex items-center justify-center p-12 md:p-16 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary-200/30 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-                <div className="relative w-40 h-40 md:w-52 md:h-52 rounded-full bg-white border-4 border-white shadow-xl flex items-center justify-center ring-4 ring-primary-100/50">
-                  <span className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">
-                    {founder.initials}
-                  </span>
-                </div>
+              {/* Photo */}
+              <div className="md:col-span-2 relative overflow-hidden bg-primary-50 min-h-[280px] md:min-h-0">
+                <img
+                  src="/Vasu.jpeg"
+                  alt="Vasu Rastogi – Founder & CEO, Rastogi Codeworks"
+                  className="w-full h-full object-cover object-top absolute inset-0"
+                />
+                {/* subtle gradient overlay at bottom to blend into card */}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/20 to-transparent pointer-events-none md:hidden" />
               </div>
               {/* Content */}
               <div className="md:col-span-3 p-8 md:p-12 flex flex-col justify-center">

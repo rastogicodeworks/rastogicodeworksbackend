@@ -4,7 +4,7 @@ import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 
 const clientLogos = [
-  'Databot-labs',
+  'DataBot Labs',
   'YD Advisory',
   'Aniyah',
   'Nb Aurum',
@@ -68,17 +68,17 @@ const featuredWork = [
   },
   {
     clientName: 'DataBot Labs',
-    title: 'Professional Ecommerce Website for Sale Robots',
-    url: '#',
-    domain: 'databotlabs.com',
+    title: 'Robotics & Automation E-Commerce Platform',
+    url: 'https://databot-labs.com',
+    domain: 'databot-labs.com',
     image: '/Image5.png',
-    alt: 'DataBot Labs  -  Professional Ecommerce Website for Sale Robots'
+    alt: 'DataBot Labs  -  Robotics & Automation E-Commerce Platform'
   },
   {
     clientName: 'Aniyah',
     title: 'Modern and Women Product Sell Focus Ecommerce Website',
     url: '#',
-    domain: 'aniyah.com',
+    domain: 'https://kurtis-ecommerce-2025.vercel.app/',
     image: '/Image6.png',
     alt: 'Aniyah  -  Modern and Women Product Sell Focus Ecommerce Website'
   }

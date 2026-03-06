@@ -45,6 +45,16 @@ const caseStudies = [
     link: 'https://dhoondh.in',
     linkLabel: 'dhoondh.in',
   },
+  {
+    id: 'databot-labs',
+    client: 'DataBot Labs',
+    tagline: 'Robotics & Automation (Netherlands)',
+    challenge: 'DataBot Labs needed a professional e-commerce platform to present and sell their advanced retail and industrial Goliath robot series to Dutch and global markets, replacing a static presence that did not reflect their engineering quality.',
+    solution: 'We built a modern, product-focused website with interactive 3D model integration, detailed product pages for each Goliath variant, multilingual support, and a streamlined demo request and contact flow aligned with their brand.',
+    result: 'A polished, high-performance online presence that communicates robotics capabilities clearly, drives qualified demo requests, and supports sales of their 24/7-ready automation solutions.',
+    link: 'https://databot-labs.com',
+    linkLabel: 'databot-labs.com',
+  },
 ];
 
 export default function CaseStudies() {

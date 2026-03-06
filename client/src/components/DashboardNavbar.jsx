@@ -11,6 +11,9 @@ import {
   Settings,
   LogOut,
   Plus,
+  Megaphone,
+  FolderKanban,
+  User,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -22,6 +25,9 @@ const ICON_MAP = {
   FilePlus,
   Users,
   Settings,
+  Megaphone,
+  FolderKanban,
+  User,
 };
 
 /**
@@ -79,8 +85,8 @@ export default function DashboardNavbar({
           </span>
         </Link>
 
-        {/* Desktop: Nav links (icons + labels) */}
-        <ul className="hidden lg:flex items-center gap-1 xl:gap-2 flex-shrink min-w-0">
+        {/* Desktop: Nav links — icons-only at lg, icons+labels at xl */}
+        <ul className="hidden lg:flex items-center gap-0.5 xl:gap-1 flex-shrink min-w-0">
           {navItems.map(({ id, label: itemLabel, icon: iconKey }) => {
             const Icon = typeof iconKey === 'string' ? ICON_MAP[iconKey] : iconKey;
             if (!Icon) return null;
@@ -89,14 +95,15 @@ export default function DashboardNavbar({
                 <button
                   type="button"
                   onClick={() => setActiveSection(id)}
-                  className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full text-sm xl:text-base font-medium transition-colors duration-200 ease-out whitespace-nowrap ${
+                  title={itemLabel}
+                  className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-full text-sm font-medium transition-colors duration-200 ease-out whitespace-nowrap ${
                     activeSection === id
                       ? 'bg-primary-50 text-primary-700 font-semibold'
                       : 'text-slate-600 hover:text-primary-700 hover:bg-slate-50'
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  {itemLabel}
+                  <span className="hidden xl:inline">{itemLabel}</span>
                 </button>
               </li>
             );
@@ -104,11 +111,11 @@ export default function DashboardNavbar({
         </ul>
 
         {/* Desktop: Actions */}
-        <div className="hidden lg:flex items-center gap-2 xl:gap-3 shrink-0 pl-2">
+        <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 shrink-0 pl-1">
           {variant === 'client' ? (
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 px-4 py-2.5 xl:px-5 xl:py-3 rounded-full font-semibold text-sm xl:text-base transition-all duration-300 hover:scale-[1.02] active:scale-95 whitespace-nowrap text-white bg-primary-500 hover:bg-primary-400 shadow-md shadow-primary-500/20"
+              className="inline-flex items-center gap-2 px-3.5 xl:px-5 py-2 xl:py-2.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-[1.02] active:scale-95 whitespace-nowrap text-white bg-primary-500 hover:bg-primary-400 shadow-md shadow-primary-500/20"
             >
               Get in touch
             </Link>
@@ -120,20 +127,22 @@ export default function DashboardNavbar({
                   onNewInvoice();
                   setActiveSection('create');
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 xl:px-5 xl:py-3 rounded-full font-semibold text-sm xl:text-base transition-all duration-300 hover:scale-[1.02] active:scale-95 whitespace-nowrap text-white bg-primary-500 hover:bg-primary-400 shadow-md shadow-primary-500/20"
+                className="inline-flex items-center gap-1.5 px-3.5 xl:px-5 py-2 xl:py-2.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-[1.02] active:scale-95 whitespace-nowrap text-white bg-primary-500 hover:bg-primary-400 shadow-md shadow-primary-500/20"
               >
                 <Plus className="w-4 h-4 shrink-0" />
-                New Invoice
+                <span className="hidden xl:inline">New Invoice</span>
+                <span className="xl:hidden">New</span>
               </button>
             )
           )}
           <button
             type="button"
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2.5 xl:px-5 xl:py-3 rounded-full text-sm xl:text-base font-semibold transition-colors duration-200 whitespace-nowrap text-slate-600 hover:text-primary-700 hover:bg-slate-50"
+            title="Logout"
+            className="flex items-center gap-1.5 xl:gap-2 px-3 xl:px-4 py-2 xl:py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 whitespace-nowrap text-slate-600 hover:text-primary-700 hover:bg-slate-50"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            Logout
+            <span className="hidden xl:inline">Logout</span>
           </button>
         </div>
 

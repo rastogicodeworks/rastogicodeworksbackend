@@ -24,6 +24,7 @@ import TermsConditions from './pages/TermsConditions';
 import RefundPolicy from './pages/RefundPolicy';
 import SecurityPolicy from './pages/SecurityPolicy';
 import Sitemap from './pages/Sitemap';
+import Team from './pages/Team';
 
 function isAdminAuthenticated() {
   if (typeof window === 'undefined') return false;
@@ -78,6 +79,7 @@ function App() {
         <Route path="refund-policy" element={<RefundPolicy />} />
         <Route path="security-policy" element={<SecurityPolicy />} />
         <Route path="sitemap" element={<Sitemap />} />
+        <Route path="team" element={<Team />} />
         <Route
           path="admin"
           element={

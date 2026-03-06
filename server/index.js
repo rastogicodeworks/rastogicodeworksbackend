@@ -11,6 +11,8 @@ import { authRouter } from './routes/auth.js';
 import { invoicesRouter } from './routes/invoices.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { clientsRouter } from './routes/clients.js';
+import { projectsRouter } from './routes/projects.js';
+import { announcementsRouter } from './routes/announcements.js';
 
 dotenv.config();
 
@@ -89,6 +91,8 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/clients', clientsRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/announcements', announcementsRouter);
 
 app.use((err, req, res, next) => {
   console.error('[global-error]', err);

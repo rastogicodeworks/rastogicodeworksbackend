@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowRight } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
@@ -204,6 +204,43 @@ const testimonials = [
   }
 ];
 
+function CountUp({ value, duration = 1600 }) {
+  const numMatch = value.match(/^(\d+)/);
+  const num = numMatch ? parseInt(numMatch[1], 10) : null;
+  const suffix = num !== null ? value.slice(String(num).length) : '';
+  const [display, setDisplay] = useState('0');
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!num) return;
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          let startTime = null;
+          const animate = (ts) => {
+            if (!startTime) startTime = ts;
+            const progress = Math.min((ts - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplay(String(Math.round(eased * num)));
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [num, duration]);
+
+  if (!num) return <span>{value}</span>;
+  return <span ref={ref}>{display}{suffix}</span>;
+}
+
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -270,7 +307,7 @@ export default function Home() {
               {slide.badge}
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-primary-950 mb-6 text-balance min-h-[1.2em]">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-primary-950 mb-6 text-balance min-h-[1.2em] [&_span.bg-clip-text]:animate-gradient-x">
               {slide.title}
             </h1>
 
@@ -281,7 +318,7 @@ export default function Home() {
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 to="/contact"
-                className="group relative px-8 py-4 rounded-full bg-primary-600 text-white font-semibold text-lg overflow-hidden shadow-lg hover:shadow-primary-500/30 transition-all duration-300 hover:-translate-y-1"
+                className="group relative px-8 py-4 rounded-full bg-primary-600 text-white font-semibold text-lg overflow-hidden shadow-lg shadow-primary-500/25 animate-glow-pulse hover:shadow-primary-500/40 transition-all duration-300 hover:-translate-y-1"
               >
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
                 <span className="relative">{slide.primaryCta}</span>
@@ -354,7 +391,7 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
+            <AnimateOnScroll variant="left" className="space-y-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-900/50 border border-primary-700/50 text-primary-300 text-sm font-medium">
                 <span className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
                 Global Reach
@@ -376,9 +413,9 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            </div>
+            </AnimateOnScroll>
             
-            <div className="relative">
+            <AnimateOnScroll variant="right" delay={150} className="relative">
               <div className="absolute -inset-1 bg-gradient-to-br from-primary-500/30 via-primary-600/10 to-transparent rounded-3xl blur-xl opacity-60" />
               <div className="relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-2xl p-6 shadow-2xl transition-all duration-500 hover:border-white/20 hover:shadow-primary-500/10">
                 {/* Mini chart card */}
@@ -442,7 +479,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
+            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -458,6 +495,7 @@ export default function Home() {
           </AnimateOnScroll>
 
           {/* Row 1: Software & App Development (big left) + Organization Setup (short right) */}
+          <AnimateOnScroll variant="up" delay={0}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="md:col-span-2 group relative p-8 rounded-3xl bg-white border border-primary-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-500 overflow-hidden hover:-translate-y-1">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-50 to-primary-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700 ease-out opacity-50" />
@@ -486,7 +524,9 @@ export default function Home() {
               </div>
             </div>
           </div>
+          </AnimateOnScroll>
           {/* Row 2: Security & Compliance (big left) + Infrastructure & Cloud (short right) */}
+          <AnimateOnScroll variant="up" delay={80}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="md:col-span-2 group relative p-8 rounded-3xl bg-white border border-primary-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-500 overflow-hidden hover:-translate-y-1">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-50 to-primary-100 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700 ease-out opacity-50" />
@@ -515,7 +555,9 @@ export default function Home() {
               </div>
             </div>
           </div>
+          </AnimateOnScroll>
           {/* Row 3: All three last services in one row */}
+          <AnimateOnScroll variant="up" delay={160}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {services.slice(4).map((service, i) => (
               <div
@@ -536,6 +578,7 @@ export default function Home() {
               </div>
             ))}
           </div>
+          </AnimateOnScroll>
         </div>
       </section>
 
@@ -659,7 +702,7 @@ export default function Home() {
 
             {/* Project 5  -  DataBot Labs */}
             <a
-              href="#"
+              href="https://databot-labs.com"
               className="group relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 block"
             >
               <div className="aspect-[16/10] overflow-hidden bg-slate-100 relative">
@@ -681,7 +724,7 @@ export default function Home() {
 
             {/* Project 6  -  Aniyah */}
             <a
-              href="#"
+              href="https://kurtis-ecommerce-2025.vercel.app/"
               className="group relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 block"
             >
               <div className="aspect-[16/10] overflow-hidden bg-slate-100 relative">
@@ -829,10 +872,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             {stats.map((stat, i) => (
-              <div key={i} className="text-center group hover:-translate-y-1 transition-transform duration-300">
-                <div className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-primary-200 mb-2">{stat.value}</div>
+              <AnimateOnScroll key={i} variant="up" delay={i * 100} className="text-center group hover:-translate-y-1 transition-transform duration-300">
+                <div className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-primary-200 mb-2">
+                  <CountUp value={stat.value} />
+                </div>
                 <div className="text-primary-200/80 font-medium tracking-wide uppercase text-sm">{stat.label}</div>
-              </div>
+              </AnimateOnScroll>
             ))}
           </div>
         </div>
@@ -860,13 +905,13 @@ export default function Home() {
                 { step: '03', title: 'Seamless Deployment', desc: 'We handle the complex infrastructure setup to ensure your product launches smoothly and securely.' },
                 { step: '04', title: 'Online Presence', desc: 'We help you establish a dominant digital footprint to attract users and grow your brand authority.' }
               ].map((item, i) => (
-                <div key={i} className="relative group text-center">
+                <AnimateOnScroll key={i} variant="up" delay={i * 120} className="relative group text-center">
                   <div className="w-24 h-24 mx-auto bg-white border-4 border-primary-100 rounded-full flex items-center justify-center text-2xl font-bold text-primary-600 mb-6 relative z-10 group-hover:border-primary-500 group-hover:scale-110 transition-all duration-300 shadow-sm">
                     {item.step}
                   </div>
                   <h3 className="text-xl font-bold text-primary-950 mb-3">{item.title}</h3>
                   <p className="text-slate-600 text-sm leading-relaxed px-4">{item.desc}</p>
-                </div>
+                </AnimateOnScroll>
               ))}
             </div>
           </div>

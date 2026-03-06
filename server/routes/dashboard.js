@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { Invoice } from '../models/Invoice.js';
 import { requireAuth, requireAdmin, requireClient } from '../middleware/auth.js';
 import { User } from '../models/User.js';
+import { Project } from '../models/Project.js';
+import { Announcement } from '../models/Announcement.js';
 
 export const dashboardRouter = Router();
 
@@ -25,6 +27,13 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
   try {
     const userEmail = req.user.email;
 
+    // Auto-mark overdue
+    const today = new Date().toISOString().slice(0, 10);
+    await Invoice.updateMany(
+      { clientEmail: userEmail, status: 'unpaid', dueDate: { $lte: today, $exists: true, $ne: '' } },
+      { $set: { status: 'overdue' } },
+    ).catch(() => {});
+
     const invoices = await Invoice.find({ clientEmail: userEmail })
       .sort({ createdAt: -1 })
       .lean();
@@ -34,31 +43,45 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
       invoiceId: `INV-${String(inv._id).slice(-6).toUpperCase()}`,
       amount: inv.total ?? 0,
       amountFormatted: `Rs. ${(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      subtotal: inv.subtotal ?? inv.total ?? 0,
       dueDate: inv.dueDate || null,
-      status: inv.status === 'paid' ? 'Paid' : 'Unpaid',
+      status: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : 'Unpaid',
       invoiceDate: inv.invoiceDate,
+      notes: inv.notes || '',
+      billingAddress: inv.billingAddress || '',
+      gstNumber: inv.gstNumber || '',
+      items: inv.items || [],
+      paymentTerms: inv.paymentTerms || [],
+      dispute: inv.dispute || { flagged: false, note: '' },
     }));
 
     // Real summary from invoices
     const paidInvoices = formattedInvoices.filter((i) => i.status === 'Paid');
-    const unpaidInvoices = formattedInvoices.filter((i) => i.status === 'Unpaid');
+    const unpaidInvoices = formattedInvoices.filter((i) => i.status === 'Unpaid' || i.status === 'Overdue');
+    const overdueInvoices = formattedInvoices.filter((i) => i.status === 'Overdue');
     const totalPaid = paidInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
     const totalUnpaid = unpaidInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
+    const totalBilled = formattedInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
 
-    // Projects derived from real invoices (one project per invoice)
-    const projects = invoices.map((inv, index) => {
-      const invId = inv._id.toString();
-      const invIdShort = `INV-${String(inv._id).slice(-6).toUpperCase()}`;
-      const isPaid = inv.status === 'paid';
-      return {
-        id: invId,
-        name: inv.clientName ? `Invoice ${invIdShort} – ${inv.clientName}` : `Invoice ${invIdShort}`,
-        status: isPaid ? 'Completed' : 'In progress',
-        progress: isPaid ? 100 : 0,
-        lastUpdate: relativeTime(inv.invoiceDate || inv.updatedAt),
-        invoiceId: invIdShort,
-      };
-    });
+    // Next upcoming due invoice
+    const now = new Date();
+    const nextDue = unpaidInvoices
+      .filter((i) => i.dueDate && new Date(i.dueDate) >= now)
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0] || null;
+
+    // Real projects for this client
+    const rawProjects = await Project.find({ clientEmail: userEmail }).sort({ createdAt: -1 }).lean();
+    const projects = rawProjects.map((p) => ({
+      id: p._id.toString(),
+      name: p.title,
+      description: p.description || '',
+      status: p.status,
+      progress: p.progress ?? 0,
+      startDate: p.startDate || '',
+      dueDate: p.dueDate || '',
+      lastUpdate: relativeTime(p.updatedAt),
+      milestones: p.milestones || [],
+    }));
 
     // Deliverables derived from real invoice line items
     const deliverables = [];
@@ -78,6 +101,11 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
       });
     });
 
+    // Announcements for this client
+    const announcements = await Announcement.find({
+      $or: [{ audience: 'all' }, { audience: userEmail }],
+    }).sort({ pinned: -1, createdAt: -1 }).lean();
+
     const user = await User.findById(req.user.id).select('name email').lean();
 
     res.json({
@@ -89,6 +117,7 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
         },
         projects,
         deliverables,
+        announcements,
         invoices: formattedInvoices,
         summary: {
           projectsCount: projects.length,
@@ -96,10 +125,15 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
           invoicesCount: formattedInvoices.length,
           paidInvoicesCount: paidInvoices.length,
           unpaidInvoicesCount: unpaidInvoices.length,
+          overdueInvoicesCount: overdueInvoices.length,
           totalPaidFormatted: `Rs. ${totalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
           totalUnpaidFormatted: `Rs. ${totalUnpaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          totalBilledFormatted: `Rs. ${totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
           totalPaid,
           totalUnpaid,
+          totalBilled,
+          collectionRate: totalBilled > 0 ? Math.round((totalPaid / totalBilled) * 100) : 0,
+          nextDueInvoice: nextDue ? { invoiceId: nextDue.invoiceId, dueDate: nextDue.dueDate, amountFormatted: nextDue.amountFormatted } : null,
         },
       },
     });

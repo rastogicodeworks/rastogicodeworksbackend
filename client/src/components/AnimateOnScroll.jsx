@@ -49,7 +49,8 @@ export default function AnimateOnScroll({
     scale: 'reveal-in reveal-scale',
     left: 'reveal-in reveal-left',
     right: 'reveal-in reveal-right',
-  }[variant];
+    fade: 'reveal-in reveal-fade',
+  }[variant] ?? 'reveal-in';
 
   return (
     <Tag

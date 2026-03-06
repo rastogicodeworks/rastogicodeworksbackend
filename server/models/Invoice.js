@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+const PaymentTermSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true, default: '' },
+    percentage: { type: Number, min: 0, max: 100, required: true },
+    dueDate: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
 const InvoiceItemSchema = new mongoose.Schema(
   {
     description: { type: String, trim: true },
@@ -27,6 +36,12 @@ const InvoiceSchema = new mongoose.Schema(
       type: String,
       enum: ['unpaid', 'paid', 'overdue'],
       default: 'unpaid',
+    },
+    paymentTerms: { type: [PaymentTermSchema], default: [] },
+    dispute: {
+      flagged: { type: Boolean, default: false },
+      note: { type: String, trim: true, default: '' },
+      flaggedAt: { type: Date },
     },
   },
   { timestamps: true },
