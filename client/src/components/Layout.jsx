@@ -4,7 +4,6 @@ import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import WhatsAppButton from './WhatsAppButton';
 import CookieConsent from './CookieConsent';
-
 export default function Layout() {
   const location = useLocation();
   const isStandalonePage = location.pathname === '/admin' || location.pathname === '/dashboard';
@@ -14,9 +13,9 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 relative z-10">
         <Outlet />
       </main>
       <Footer />

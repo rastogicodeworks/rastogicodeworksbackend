@@ -21,16 +21,14 @@ function isClientLoggedIn() {
   return localStorage.getItem('isClient') === 'true';
 }
 
-const SCROLL_THRESHOLD = 280; // switch to dark navbar after scrolling past hero
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > SCROLL_THRESHOLD);
-    onScroll(); // run once for initial state
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -45,7 +43,7 @@ export default function Navbar() {
     return () => media.removeEventListener('change', handler);
   }, []);
 
-  const darkMode = scrolled;
+  const darkMode = false;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[100] flex justify-center pointer-events-none px-2 sm:px-4 pt-[max(12px,env(safe-area-inset-top))] sm:pt-[max(14px,env(safe-area-inset-top))] md:pt-4 lg:pt-6">
@@ -57,25 +55,25 @@ export default function Navbar() {
           aria-hidden
         />
       )}
-      <nav className={`relative z-10 pointer-events-auto backdrop-blur-xl rounded-full pl-3 pr-3 sm:pl-5 sm:pr-5 md:pl-8 md:pr-8 h-[72px] sm:h-[76px] md:h-[84px] lg:h-[96px] w-[95%] max-w-7xl min-w-0 transition-all duration-300 flex items-center justify-between gap-1 sm:gap-2 md:gap-4 ${open ? 'overflow-visible' : 'overflow-hidden'} ${
-        darkMode 
-          ? 'bg-primary-900/60 md:bg-primary-900/80 border border-white/20 shadow-lg shadow-black/20' 
-          : 'bg-white/40 sm:bg-white/50 border border-primary-200/50 sm:border-white/30 shadow-lg shadow-black/10'
+      <nav className={`relative z-10 pointer-events-auto rounded-full pl-5 pr-5 sm:pl-6 sm:pr-6 md:pl-8 md:pr-8 h-[84px] sm:h-[88px] md:h-[96px] lg:h-[108px] w-[95%] max-w-7xl min-w-0 transition-all duration-300 flex items-center justify-between gap-1 sm:gap-2 md:gap-4 ${open ? 'overflow-visible' : 'overflow-hidden'} ${
+        scrolled
+          ? 'bg-white/80 backdrop-blur-xl shadow-lg shadow-black/5 border border-white/20'
+          : 'bg-transparent border-transparent shadow-none'
       }`}>
         
         {/* Left: Logo + Brand name  -  switch logo when navbar is dark (scrolled); click goes to home and scroll to top */}
         <Link
           to="/"
           aria-label="Go to home"
-          className="flex items-center gap-2 md:gap-3 shrink-0 min-w-0 max-w-[60%] sm:max-w-none group"
+          className="flex items-center gap-2 md:gap-3 shrink-0 min-w-0 max-w-[70%] sm:max-w-none group"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <img
             src={darkMode ? '/logo_transparent.png' : '/transparent_logo.png'}
             alt="Rastogi Codeworks"
-            className="h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 object-contain flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
+            className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 object-contain flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
           />
-          <span className={`font-brand font-semibold text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl tracking-tight truncate italic transition-colors duration-300 ${
+          <span className={`font-brand font-semibold text-base sm:text-lg md:text-xl lg:text-2xl tracking-tight truncate italic transition-colors duration-300 ${
             darkMode ? 'text-white' : 'text-primary-950'
           }`}>
             Rastogi Codeworks
@@ -190,13 +188,13 @@ export default function Navbar() {
         {/* Mobile Menu Button */}
         <button
             type="button"
-            className={`lg:hidden p-2.5 sm:p-3 rounded-full transition-colors shrink-0 ${
+            className={`lg:hidden p-3 sm:p-3.5 rounded-full transition-colors shrink-0 ${
               darkMode ? 'text-white/90 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-primary-700 hover:bg-primary-50'
             }`}
             onClick={() => setOpen((o) => !o)}
             aria-label="Toggle menu"
           >
-            <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 sm:w-9 sm:h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {open ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (

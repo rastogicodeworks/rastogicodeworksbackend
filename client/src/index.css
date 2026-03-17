@@ -330,3 +330,13 @@
   animation: border-spin 4s linear infinite;
   z-index: -1;
 }
+
+/* Animated Background Grid */
+@keyframes grid-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 24px 24px; }
+}
+
+.animate-grid-fade {
+  animation: grid-move 20s linear infinite;
+}

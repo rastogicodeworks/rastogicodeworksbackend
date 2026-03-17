@@ -20,74 +20,6 @@ const logos = [
   'Many More Startups…',
 ];
 
-const heroSlides = [
-  {
-    id: 1,
-    badge: 'Available for new projects',
-    title: (
-      <>
-        We Build <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400 relative">
-          Digital Experiences
-          <svg className="absolute w-full h-3 -bottom-1 left-0 text-primary-200 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-            <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
-          </svg>
-        </span> That Matter.
-      </>
-    ),
-    subtitle: 'From intuitive user interfaces to powerful backend systems, we craft software that drives growth and efficiency for your business.',
-    primaryCta: 'Start Your Project',
-    secondaryCta: 'View Services'
-  },
-  {
-    id: 2,
-    badge: 'Innovation First',
-    title: (
-      <>
-        Scalable <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Solutions</span> for Modern Businesses.
-      </>
-    ),
-    subtitle: 'Future-proof your technology stack with our expert full-stack development and cloud infrastructure services designed for scale.',
-    primaryCta: 'Get a Quote',
-    secondaryCta: 'Our Work'
-  },
-  {
-    id: 3,
-    badge: 'Expert Team',
-    title: (
-      <>
-        Your Vision, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Engineered</span> to Perfection.
-      </>
-    ),
-    subtitle: 'Partner with a team that understands your goals and delivers reliable, high-performance software on time and within budget.',
-    primaryCta: 'Contact Us',
-    secondaryCta: 'View Pricing',
-    secondaryCtaTo: '/pricing'
-  },
-  {
-    id: 4,
-    badge: 'Next-Gen Tech',
-    title: (
-      <>
-        Empowering Growth with <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Artificial Intelligence</span>.
-      </>
-    ),
-    subtitle: 'Harness the power of AI and Machine Learning to automate workflows and unlock new opportunities for your enterprise.',
-    primaryCta: 'Explore AI',
-    secondaryCta: 'Case Studies'
-  },
-  {
-    id: 5,
-    badge: 'Mobile First',
-    title: (
-      <>
-        Seamless Experiences on <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Every Device</span>.
-      </>
-    ),
-    subtitle: 'We craft responsive, high-performance mobile applications that keep your users engaged anywhere, anytime.',
-    primaryCta: 'Mobile Solutions',
-    secondaryCta: 'View Portfolio'
-  }
-];
 
 const services = [
   {
@@ -242,22 +174,6 @@ function CountUp({ value, duration = 1600 }) {
 }
 
 export default function Home() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-        setIsTransitioning(false);
-      }, 500); // Wait for exit animation
-    }, 5000); // Change slide every 5 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const slide = heroSlides[currentSlide];
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -279,91 +195,62 @@ export default function Home() {
         jsonLd={organizationJsonLd}
       />
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col justify-start md:justify-center items-center pt-28 pb-24 md:pt-48 md:pb-32 overflow-hidden bg-white">
-        {/* Background Grid */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.6] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 to-white pointer-events-none" />
-        
-        {/* Animated Blobs Background */}
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-primary-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob" />
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-primary-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000" />
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-primary-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000" />
-        
-        {/* Glow Effects - Dynamic based on slide */}
-        <div className={`absolute top-1/4 left-1/4 w-96 h-96 bg-primary-200/40 rounded-full blur-3xl -z-10 animate-pulse-soft mix-blend-multiply transition-all duration-1000 ${currentSlide % 2 === 0 ? 'translate-x-0' : 'translate-x-20'}`} />
-        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-300/30 rounded-full blur-3xl -z-10 animate-pulse-soft mix-blend-multiply transition-all duration-1000 ${currentSlide % 2 === 0 ? 'translate-x-0' : '-translate-x-20'}`} style={{ animationDelay: '1s' }} />
-        
-        {/* Floating Shapes */}
-        <div className="absolute top-20 left-10 w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl opacity-20 animate-float-slow rotate-12 blur-sm" />
-        <div className="absolute bottom-40 right-10 w-24 h-24 bg-gradient-to-br from-primary-300 to-primary-500 rounded-full opacity-20 animate-float-medium -rotate-12 blur-sm" />
+      <section className="relative min-h-[90vh] flex flex-col justify-center pt-28 md:pt-32 pb-20 overflow-hidden bg-white">
+        {/* Background - white + soft green fade */}
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/70 via-white to-white pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[min(100%,420px)] h-[420px] bg-emerald-100/50 rounded-bl-[12rem] blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary-50/60 rounded-tr-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className={`transition-all duration-500 transform ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 border border-primary-200 text-primary-700 text-sm font-medium mb-8 shadow-sm backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
-              </span>
-              {slide.badge}
-            </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary-700 animate-fade-in-up">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary-500 animate-pulse" />
+            Where code meets experience
+          </p>
+          <h1 className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] font-bold tracking-tight text-slate-900 leading-[1.1] animate-fade-in-up delay-100">
+            Custom software that{' '}
+            <span className="text-primary-600">drives real growth.</span>
+          </h1>
+          <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed animate-fade-in-up delay-200">
+            We build web, mobile, and cloud solutions for startups and enterprises across India—delivered on time, built to scale.
+          </p>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-primary-950 mb-6 text-balance min-h-[1.2em] [&_span.bg-clip-text]:animate-gradient-x">
-              {slide.title}
-            </h1>
-
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 text-pretty min-h-[3.5em]">
-              {slide.subtitle}
-            </p>
-
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                to="/contact"
-                className="group relative px-8 py-4 rounded-full bg-primary-600 text-white font-semibold text-lg overflow-hidden shadow-lg shadow-primary-500/25 animate-glow-pulse hover:shadow-primary-500/40 transition-all duration-300 hover:-translate-y-1"
-              >
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
-                <span className="relative">{slide.primaryCta}</span>
-              </Link>
-              <Link
-                to={slide.secondaryCtaTo || '/services'}
-                className="px-8 py-4 rounded-full bg-white text-primary-700 border border-primary-200 font-semibold text-lg hover:bg-primary-50 hover:border-primary-300 transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-md"
-              >
-                {slide.secondaryCta}
-              </Link>
-              <a
-                href="/Rastogicodeworks-Broucher.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                download="Rastogi-Codeworks-Brochure.pdf"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white/90 text-primary-700 border border-primary-200 font-semibold text-lg hover:bg-primary-50 hover:border-primary-300 transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-md backdrop-blur-sm"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                Download brochure
-              </a>
-            </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-in-up delay-300">
+            <Link
+              to="/contact"
+              className="group inline-flex items-center gap-2 rounded-2xl bg-primary-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary-600/30 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/25 hover:-translate-y-0.5 transition-all duration-300"
+            >
+              Start your project
+              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+            <Link
+              to="/services"
+              className="inline-flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-700 hover:border-primary-300 hover:bg-primary-50/50 hover:text-primary-800 transition-all duration-300"
+            >
+              Our services
+            </Link>
           </div>
 
-
-          {/* Slide Indicators */}
-          <div className="flex justify-center gap-2 mt-12">
-            {heroSlides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setIsTransitioning(true);
-                  setTimeout(() => {
-                    setCurrentSlide(index);
-                    setIsTransitioning(false);
-                  }, 300);
-                }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  currentSlide === index ? 'w-8 bg-primary-600' : 'w-2 bg-primary-200 hover:bg-primary-300'
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
+          {/* Value pills */}
+          <div className="mt-12 flex flex-wrap justify-center gap-3 animate-fade-in-up" style={{ animationDelay: '350ms' }}>
+            {['On-time delivery', 'Scalable & secure', 'Pan-India support', 'Transparent pricing'].map((label, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary-100 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm"
+              >
+                <svg className="h-4 w-4 text-primary-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {label}
+              </span>
             ))}
           </div>
+
+        </div>
+
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-slate-400">
+          <svg className="w-5 h-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
       </section>
 
@@ -377,109 +264,6 @@ export default function Home() {
                 {logo}
               </span>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Global Impact Section - Dark Hero Style */}
-      <section className="relative py-32 bg-primary-950 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80')] bg-cover bg-center opacity-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-950 via-primary-900/90 to-primary-950" />
-        
-        {/* Animated Grid Lines */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <AnimateOnScroll variant="left" className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-900/50 border border-primary-700/50 text-primary-300 text-sm font-medium">
-                <span className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
-                Global Reach
-              </div>
-              <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight">
-                Building Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-200">International Presence.</span>
-              </h2>
-              <p className="text-lg text-primary-200/80 leading-relaxed max-w-xl">
-                We build software that scales globally. Our distributed architecture ensures your application performs flawlessly for users in Netherlands, Africa, UAE and Many More.
-              </p>
-              <div className="flex flex-wrap gap-8 pt-4">
-                {[
-                  { label: 'Countries 4+ Served', value: '4+' },
-                  { label: 'Attraction', value: '95%' }
-                ].map((stat, i) => (
-                  <div key={i}>
-                    <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                    <div className="text-sm text-primary-400 uppercase tracking-wider">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </AnimateOnScroll>
-            
-            <AnimateOnScroll variant="right" delay={150} className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-br from-primary-500/30 via-primary-600/10 to-transparent rounded-3xl blur-xl opacity-60" />
-              <div className="relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-2xl p-6 shadow-2xl transition-all duration-500 hover:border-white/20 hover:shadow-primary-500/10">
-                {/* Mini chart card */}
-                <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-5 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-white/90 text-sm font-medium">Analytics</span>
-                    <div className="w-8 h-8 rounded-xl bg-primary-500/20 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-                    </div>
-                  </div>
-                  <div className="flex items-end justify-between gap-1 h-16">
-                    {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                      <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-primary-600/60 to-primary-400/40 min-h-[4px] transition-all duration-300 hover:from-primary-500/80" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
-                </div>
-                {/* Status + Notifications row */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-emerald-500/30 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium text-sm">All systems go</p>
-                      <p className="text-white/60 text-xs">Deployment complete</p>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white/[0.06] border border-white/10 px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary-500/20 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                    </div>
-                    <div>
-                      <p className="text-white font-medium text-sm">Notifications</p>
-                      <p className="text-white/60 text-xs">2 new updates</p>
-                    </div>
-                  </div>
-                </div>
-                {/* Live session hero */}
-                <div className="relative rounded-2xl overflow-hidden border border-white/10 group mb-4">
-                  <img src="/meetings.png" alt="Live session - team collaboration and meetings" className="w-full h-45 object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary-950/90 via-primary-900/40 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-white text-sm font-medium">Live Session</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Footer: quick links + sync */}
-                <div className="flex items-center justify-between pt-4 border-t border-white/10 flex-wrap gap-3">
-                  <div className="flex items-center gap-4 text-sm">
-                    <Link to="/services" className="text-white/80 hover:text-white transition-colors font-medium">Services</Link>
-                    <span className="text-white/30">·</span>
-                    <Link to="/contact" className="text-white/80 hover:text-white transition-colors font-medium">Contact</Link>
-                    <span className="text-white/30">·</span>
-                    <Link to="/about" className="text-white/80 hover:text-white transition-colors font-medium">About</Link>
-                  </div>
-                  <div className="flex items-center gap-2 text-primary-300/90 text-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Real-time Sync Active
-                  </div>
-                </div>
-              </div>
-            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -748,76 +532,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Innovation Spotlight - Split Hero (marketing + SEO) */}
-      <section className="py-24 bg-white overflow-hidden" aria-labelledby="innovation-heading">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimateOnScroll variant="up">
-          <div className="bg-primary-50 rounded-[3rem] p-8 md:p-12 lg:p-16 relative overflow-hidden">
-            {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-primary-200/30 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-primary-200/30 to-transparent rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
-
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
-              <div className="order-2 lg:order-1">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-primary-600 rounded-2xl rotate-2 group-hover:rotate-1 transition-transform duration-500 opacity-20" />
-                  <img 
-                    src="/used.png" 
-                    alt="Rastogi Codeworks development team building software with velocity - custom web and app development" 
-                    className="relative rounded-2xl shadow-xl w-full h-auto object-cover transform -rotate-2 group-hover:rotate-0 transition-transform duration-500"
-                  />
-                  {/* Floating Badge */}
-                  <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-xl shadow-lg animate-float-medium">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Velocity</p>
-                        <p className="text-lg font-bold text-primary-950">2x Faster</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="order-1 lg:order-2 space-y-6">
-                <p className="text-sm font-semibold text-primary-600 uppercase tracking-widest">How we build</p>
-                <h2 id="innovation-heading" className="text-3xl md:text-5xl font-bold text-primary-950 leading-tight">
-                  Ship Faster. <br />
-                  <span className="text-primary-600">Scale Smarter.</span>
-                </h2>
-                <p className="text-lg text-slate-600 leading-relaxed">
-                  Custom software development that delivers. We combine proven processes with modern tech - AI, automation, and secure cloud infrastructure - so you get scalable applications and APIs without the guesswork.
-                </p>
-                <ul className="space-y-4 pt-4" role="list">
-                  {[
-                    'Faster delivery with agile development and clear milestones',
-                    'Enterprise-grade security and compliance built in',
-                    'Scalable architecture so your product grows with you'
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-primary-800 font-medium">
-                      <span className="w-6 h-6 rounded-full bg-primary-200 flex items-center justify-center text-primary-700 text-xs flex-shrink-0">✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="pt-6">
-                  <Link to="/about" className="text-primary-600 font-bold hover:text-primary-800 inline-flex items-center gap-2 transition-colors">
-                    See how we build
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
 
       {/* Brochure - Download PDF */}
       <section className="py-24 bg-white relative overflow-hidden" aria-labelledby="brochure-heading">

@@ -23,7 +23,7 @@ export default function Blog() {
         keywords="software development blog, tech blog India, agile development, custom software insights, Rastogi Codeworks blog"
       />
       <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-grid-fade pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <p className="text-sm font-semibold text-primary-600 uppercase tracking-widest mb-4">Content & insights</p>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-primary-950 mb-6">

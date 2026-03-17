@@ -70,6 +70,7 @@ export default function Login() {
       {/* Full-page hero strip  -  sets the tone */}
       <section className="relative pt-28 pb-8 md:pt-36 md:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-primary-50/30" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-grid-fade pointer-events-none" />
         <div className="absolute top-0 right-0 w-[min(80vw,600px)] h-[min(80vw,600px)] bg-primary-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-[min(60vw,400px)] h-[min(60vw,400px)] bg-primary-50/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
         <div className="relative max-w-6xl mx-auto">
