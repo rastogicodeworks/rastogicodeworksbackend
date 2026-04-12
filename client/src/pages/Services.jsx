@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 import AnimateOnScroll from '../components/AnimateOnScroll';
-import { 
-  ArrowRight, Code, Zap, Globe, CheckCircle, HelpCircle, ChevronDown, ChevronUp
-} from 'lucide-react';
+import { ArrowRight, Code, Zap, MapPin, Globe, CheckCircle, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import ServiceCardActions from '../components/ServiceCardActions';
 import { useState } from 'react';
 import { services } from '../data/services';
 import { citiesForSEO } from '../data/locations';
@@ -129,10 +128,10 @@ export default function Services() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Row 1: Software & App Development (big left) + Organization Setup (short right) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <Link to={`/services/${services[1].id}`} className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
+            <div className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
               <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-6 group-hover:scale-110 transition-transform duration-500">
-                <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
+                <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-white text-slate-700 transition-colors duration-300 group-hover:text-primary-600 [&_svg]:transition-transform group-hover:[&_svg]:scale-105">
                   {services[1].icon}
                 </div>
               </div>
@@ -146,32 +145,26 @@ export default function Services() {
                   </div>
                 ))}
               </div>
-              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
-                View More
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-            <Link to={`/services/${services[0].id}`} className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
+              <ServiceCardActions serviceId={services[1].id} variant="large" />
+            </div>
+            <div className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
               <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
-                <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
+                <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-white text-slate-700 transition-colors duration-300 group-hover:text-primary-600 [&_svg]:transition-transform group-hover:[&_svg]:scale-105">
                   {services[0].icon}
                 </div>
               </div>
               <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{services[0].title}</h3>
               <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{services[0].shortDesc}</p>
-              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
-                View More
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
+              <ServiceCardActions serviceId={services[0].id} />
+            </div>
           </div>
           {/* Row 2: Security & Compliance (big left) + Infrastructure & Cloud (short right) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <Link to={`/services/${services[3].id}`} className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
+            <div className="md:col-span-2 group relative flex flex-col p-8 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
               <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-6 group-hover:scale-110 transition-transform duration-500">
-                <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
+                <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-white text-slate-700 transition-colors duration-300 group-hover:text-primary-600 [&_svg]:transition-transform group-hover:[&_svg]:scale-105">
                   {services[3].icon}
                 </div>
               </div>
@@ -185,47 +178,37 @@ export default function Services() {
                   </div>
                 ))}
               </div>
-              <span className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
-                View More
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-            <Link to={`/services/${services[2].id}`} className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
+              <ServiceCardActions serviceId={services[3].id} variant="large" />
+            </div>
+            <div className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden md:justify-center">
               <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
-                <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
+                <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-white text-slate-700 transition-colors duration-300 group-hover:text-primary-600 [&_svg]:transition-transform group-hover:[&_svg]:scale-105">
                   {services[2].icon}
                 </div>
               </div>
               <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{services[2].title}</h3>
               <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{services[2].shortDesc}</p>
-              <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
-                View More
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
+              <ServiceCardActions serviceId={services[2].id} />
+            </div>
           </div>
           {/* Row 3: All three last services in one row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {services.slice(4).map((service) => (
-              <Link
+              <div
                 key={service.id}
-                to={`/services/${service.id}`}
                 className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:border-primary-100 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
               >
                 <div className="absolute inset-0 rounded-[2rem] bg-transparent group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-500">
-                  <div className="w-full h-full bg-white rounded-[0.9rem] flex items-center justify-center text-slate-700 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-primary-600 group-hover:to-primary-800">
+                  <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-white text-slate-700 transition-colors duration-300 group-hover:text-primary-600 [&_svg]:transition-transform group-hover:[&_svg]:scale-105">
                     {service.icon}
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-primary-950 mb-2 group-hover:text-primary-700 transition-colors duration-300">{service.title}</h3>
                 <p className="text-slate-600 text-sm mb-4 leading-relaxed text-pretty flex-grow">{service.shortDesc}</p>
-                <span className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm group-hover:bg-primary-50 group-hover:text-primary-700 transition-all duration-300 mt-auto">
-                  View More
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
+                <ServiceCardActions serviceId={service.id} />
+              </div>
             ))}
           </div>
         </div>
@@ -312,31 +295,31 @@ export default function Services() {
         </div>
       </section>
 
-      {/* Locations - modern, aesthetic, SEO-optimized */}
+      {/* Pan-India (moved from home) */}
       <section className="relative py-20 md:py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-primary-50/30" />
-        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-primary-200/25 blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4" />
-        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-50/40 via-white to-primary-50/30" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-200/20 blur-3xl" />
+        <div className="relative mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
           <AnimateOnScroll variant="scale">
-          <div className="rounded-3xl border border-primary-100/80 bg-white/80 backdrop-blur-sm shadow-lg shadow-primary-500/5 p-8 md:p-10 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-200/60 text-primary-700 text-sm font-medium mb-6">
-              <Globe className="w-4 h-4 text-primary-600" />
-              <span>We Serve All of India</span>
+            <div className="rounded-3xl border border-primary-100/80 bg-white/80 p-8 text-center shadow-lg shadow-primary-500/5 backdrop-blur-sm md:p-10">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-200/60 bg-primary-500/10 px-4 py-2 text-sm font-medium text-primary-700">
+                <MapPin className="h-4 w-4 text-primary-600" aria-hidden />
+                <span>Pan-India</span>
+              </div>
+              <h2 className="mb-4 text-2xl font-bold tracking-tight text-primary-950 md:text-3xl">
+                Best Services in All Cities & States of India
+              </h2>
+              <p className="mx-auto mb-8 max-w-xl text-base leading-relaxed text-slate-600 md:text-lg">
+                We deliver software development and digital solutions across every state and union territory in India - from metros to tier‑2 cities.
+              </p>
+              <a
+                href="#services-grid"
+                className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-500/30"
+              >
+                View our services
+                <ArrowRight className="h-5 w-5" aria-hidden />
+              </a>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-primary-950 mb-4 tracking-tight">
-              Best Services Across Every State & City
-            </h2>
-            <p className="text-slate-600 text-base md:text-lg leading-relaxed mb-8 max-w-xl mx-auto">
-              Rastogi Codeworks delivers software development, web development, and digital solutions across India - in every state and union territory, from metros to tier‑2 cities.
-            </p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary-600 text-white font-semibold shadow-lg shadow-primary-500/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              Get a free consultation
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
           </AnimateOnScroll>
         </div>
       </section>

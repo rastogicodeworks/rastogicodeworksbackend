@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ArrowRight } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 import AnimateOnScroll from '../components/AnimateOnScroll';
-import { blogPosts } from '../data/blogPosts';
+import { blogPosts, getLatestPosts } from '../data/blogPosts';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -35,7 +35,46 @@ export default function Blog() {
         </div>
       </section>
 
-      <section className="py-12 md:py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="border-b border-primary-100 bg-white py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AnimateOnScroll variant="up" className="mb-10 flex flex-col items-center justify-between gap-4 md:flex-row md:items-end">
+            <div className="text-center md:text-left">
+              <h2 className="mb-4 text-3xl font-bold text-primary-950 md:text-5xl">Latest from the blog</h2>
+              <p className="max-w-xl text-lg text-slate-600">
+                Insights on software strategy, agile delivery, and building products that scale.
+              </p>
+            </div>
+            <a
+              href="#blog-archive"
+              className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700 md:text-base"
+            >
+              View all posts
+              <ArrowRight className="h-5 w-5" aria-hidden />
+            </a>
+          </AnimateOnScroll>
+          <div className="grid gap-6 md:grid-cols-3">
+            {getLatestPosts(3).map((post, i) => (
+              <AnimateOnScroll key={post.slug} variant="up" delay={i * 80}>
+                <Link
+                  to={`/blog/${post.slug}`}
+                  className="group block rounded-2xl border border-primary-100 bg-white p-6 shadow-sm transition-all duration-300 hover:border-primary-200 hover:shadow-lg"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wider text-primary-600">{post.category}</span>
+                  <h3 className="mt-2 mb-2 line-clamp-2 text-xl font-bold text-primary-950 transition-colors group-hover:text-primary-700">
+                    {post.title}
+                  </h3>
+                  <p className="line-clamp-2 text-sm text-slate-600">{post.excerpt}</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary-600 transition-all group-hover:gap-2">
+                    Read article <ArrowRight className="h-4 w-4" aria-hidden />
+                  </span>
+                </Link>
+              </AnimateOnScroll>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="blog-archive" className="scroll-mt-28 py-12 md:py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-10">
           {sorted.map((post, i) => (
             <AnimateOnScroll key={post.slug} variant="up" delay={i * 50}>

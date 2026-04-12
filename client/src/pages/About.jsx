@@ -268,36 +268,30 @@ export default function About() {
                 }
               ].map((leader, i) => (
                 <div key={i} className="flex flex-col items-center gap-4 w-full max-w-sm">
-                  {/* Portrait card */}
-                  <div className="group relative overflow-hidden rounded-3xl w-full">
-                    <img
-                      src={leader.image}
-                      alt={leader.name}
-                      className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    {/* Always-visible name/role strip at the bottom */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950/95 via-primary-950/70 to-transparent pt-16 pb-6 px-6">
-                      <h3 className="text-2xl font-bold text-white mb-0.5">{leader.name}</h3>
-                      <p className="text-primary-300 font-semibold text-sm">{leader.role}</p>
+                  {/* Portrait card: bottom strip hides on md+ hover so it never shows through the overlay */}
+                  <div className="w-full overflow-hidden rounded-3xl bg-primary-950 shadow-lg ring-1 ring-black/5">
+                    <div className="group relative">
+                      <img
+                        src={leader.image}
+                        alt={leader.name}
+                        className="w-full aspect-[3/4] object-cover transition-transform duration-700 md:group-hover:scale-105"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-primary-950/95 via-primary-950/75 to-transparent pt-16 pb-6 px-6 transition-opacity duration-300 md:group-hover:opacity-0 md:group-hover:pointer-events-none">
+                        <h3 className="text-2xl font-bold text-white mb-0.5">{leader.name}</h3>
+                        <p className="text-primary-300 font-semibold text-sm">{leader.role}</p>
+                      </div>
+                      {/* Desktop only: hover overlay (touch devices use bio block below) */}
+                      <div className="pointer-events-none absolute inset-0 z-20 hidden flex-col justify-end bg-primary-950/95 p-6 opacity-0 transition-opacity duration-300 md:flex md:flex-col md:group-hover:pointer-events-auto md:group-hover:opacity-100">
+                        <h3 className="text-xl font-bold text-white mb-0.5">{leader.name}</h3>
+                        <p className="text-primary-300 mb-3 text-sm font-semibold">{leader.role}</p>
+                        <p className="text-sm leading-relaxed text-slate-300">{leader.bio}</p>
+                      </div>
                     </div>
-                    {/* Bio revealed on hover */}
-                    <div className="absolute inset-0 bg-primary-950/80 opacity-0 group-hover:opacity-100 transition-opacity duration-400 flex flex-col justify-end p-6">
-                      <h3 className="text-xl font-bold text-white mb-0.5">{leader.name}</h3>
-                      <p className="text-primary-300 font-semibold text-sm mb-3">{leader.role}</p>
-                      <p className="text-slate-300 text-sm leading-relaxed">{leader.bio}</p>
-                      <Link
-                        to="/team"
-                        className="mt-4 inline-flex items-center gap-1.5 text-primary-300 hover:text-white font-semibold text-sm transition-colors duration-200"
-                      >
-                        View full profile
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                      </Link>
+                    <div className="border-t border-white/10 px-5 py-4 md:hidden">
+                      <p className="text-sm leading-relaxed text-slate-300">{leader.bio}</p>
                     </div>
                   </div>
 
-                  {/* View full profile link */}
                   <Link
                     to="/team"
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-primary-200 text-primary-700 font-semibold text-sm hover:bg-primary-50 hover:border-primary-400 hover:-translate-y-0.5 transition-all duration-300"

@@ -1,9 +1,9 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
 import WhatsAppButton from './WhatsAppButton';
 import CookieConsent from './CookieConsent';
+import VisitEngagementPopup from './VisitEngagementPopup';
 export default function Layout() {
   const location = useLocation();
   const isStandalonePage = location.pathname === '/admin' || location.pathname === '/dashboard';
@@ -19,9 +19,9 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <BackToTopButton />
       <WhatsAppButton />
       <CookieConsent />
+      <VisitEngagementPopup />
     </div>
   );
 }

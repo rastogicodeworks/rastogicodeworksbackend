@@ -1,6 +1,15 @@
 import { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Zap, Shield, Target } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Zap,
+  Shield,
+  Target,
+  IndianRupee,
+  ListChecks,
+  Info,
+} from 'lucide-react';
 import { services } from '../data/services';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
@@ -53,7 +62,17 @@ export default function ServiceDetail() {
             <p className="text-xl md:text-2xl text-primary-200/90 leading-relaxed max-w-2xl">
               {service.shortDesc}
             </p>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-8 sm:pt-10">
+            {service.pricing?.headline && (
+              <p className="text-primary-100/95 text-base md:text-lg font-medium flex flex-wrap items-center gap-2">
+                <IndianRupee className="w-5 h-5 opacity-90 shrink-0" aria-hidden />
+                <span>
+                  Starting from{' '}
+                  <span className="text-white font-bold">{service.pricing.headline.replace(/^From\s+/i, '')}</span>
+                  <span className="text-primary-200/90 font-normal"> · indicative, excl. tax</span>
+                </span>
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-4 pt-4 sm:pt-6">
               <Link
                 to="/contact"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-primary-900 font-bold hover:bg-primary-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 min-h-[56px]"
@@ -62,10 +81,16 @@ export default function ServiceDetail() {
                 <ArrowRight className="w-5 h-5 shrink-0" />
               </Link>
               <a
-                href="#process"
+                href="#pricing"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-xl border-2 border-white/30 text-white font-semibold hover:bg-white/10 transition-all duration-300 min-h-[56px]"
               >
-                See our process
+                Pricing details
+              </a>
+              <a
+                href="#process"
+                className="inline-flex items-center justify-center px-6 py-4 rounded-xl text-primary-200 font-semibold hover:text-white underline-offset-4 hover:underline min-h-[56px]"
+              >
+                Our process
               </a>
             </div>
           </div>
@@ -114,6 +139,101 @@ export default function ServiceDetail() {
           </div>
         </div>
       </section>
+
+      {/* Pricing  -  detailed */}
+      {service.pricing && (
+        <section
+          id="pricing"
+          className="py-20 md:py-28 bg-gradient-to-b from-primary-50/50 via-white to-white border-y border-primary-100/60"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mb-12 md:mb-16">
+              <p className="text-sm font-semibold text-primary-600 uppercase tracking-widest mb-2">Pricing</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-4">
+                Investment &amp; how we bill
+              </h2>
+              <p className="text-slate-600 text-lg leading-relaxed">
+                All amounts are <strong className="font-semibold text-slate-800">indicative in INR, excluding taxes</strong>.
+                Your final proposal lists deliverables, milestones, and payment terms after we align on scope.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+              <div className="lg:col-span-5 space-y-6">
+                <div className="rounded-3xl border border-primary-200/80 bg-white shadow-xl shadow-primary-900/5 p-8 md:p-10">
+                  {service.pricing.model && (
+                    <p className="text-xs font-bold uppercase tracking-wider text-primary-600 mb-3">
+                      {service.pricing.model}
+                    </p>
+                  )}
+                  <p className="text-sm font-semibold text-slate-500 mb-1">Starting at</p>
+                  <p className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4">
+                    {service.pricing.headline}
+                  </p>
+                  <p className="text-slate-600 leading-relaxed mb-6">{service.pricing.note}</p>
+                  {service.pricing.summary && (
+                    <p className="text-slate-700 text-base leading-relaxed border-t border-slate-100 pt-6">
+                      {service.pricing.summary}
+                    </p>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8">
+                    <Link
+                      to="/contact"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 transition-colors shadow-md"
+                    >
+                      Request exact quote
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      to="/pricing"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-slate-200 text-slate-800 font-semibold hover:border-primary-200 hover:bg-primary-50/50 transition-colors"
+                    >
+                      All services pricing
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 space-y-10">
+                {Array.isArray(service.pricing.included) && service.pricing.included.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center">
+                        <ListChecks className="w-5 h-5" aria-hidden />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900">Typically included at this entry range</h3>
+                    </div>
+                    <ul className="space-y-3">
+                      {service.pricing.included.map((line, i) => (
+                        <li key={i} className="flex gap-3 text-slate-700 leading-relaxed">
+                          <CheckCircle2 className="w-5 h-5 text-primary-500 shrink-0 mt-0.5" aria-hidden />
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {Array.isArray(service.pricing.extras) && service.pricing.extras.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-6 md:p-8">
+                    <div className="flex items-start gap-3 mb-3">
+                      <Info className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" aria-hidden />
+                      <h3 className="text-lg font-bold text-slate-900">Often quoted separately</h3>
+                    </div>
+                    <ul className="space-y-2 text-slate-600 text-sm md:text-base leading-relaxed">
+                      {service.pricing.extras.map((line, i) => (
+                        <li key={i} className="pl-1 border-l-2 border-slate-200 pl-4">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Key Features  -  card grid */}
       <section className="py-20 md:py-28 bg-slate-50/80 border-y border-slate-100">
@@ -226,6 +346,9 @@ export default function ServiceDetail() {
                     {s.icon}
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-primary-700">{s.title}</h3>
+                  {s.pricing?.headline && (
+                    <p className="text-primary-700 font-bold text-sm mb-2">{s.pricing.headline}</p>
+                  )}
                   <p className="text-slate-600 text-sm line-clamp-2">{s.shortDesc}</p>
                   <span className="inline-flex items-center gap-1 text-primary-600 font-semibold text-sm mt-3 group-hover:gap-2 transition-all">
                     Learn more

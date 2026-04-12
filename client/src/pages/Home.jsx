@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
+import ServiceCardActions from '../components/ServiceCardActions';
 import AnimateOnScroll from '../components/AnimateOnScroll';
-import { getLatestPosts } from '../data/blogPosts';
-
 const logos = [
   'Nb Aurum',
   'Rastogi&Associates',
@@ -41,6 +40,17 @@ const services = [
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    )
+  },
+  {
+    id: 'website-development',
+    title: 'Website Development',
+    desc: 'Business websites and landing pages—fast, responsive, and easy to manage—starting at an accessible entry point.',
+    span: 'md:col-span-2',
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
       </svg>
     )
   },
@@ -185,6 +195,10 @@ export default function Home() {
     sameAs: [],
   };
 
+  /** Mint neon highlights aligned with hero green rays; body stays white */
+  const heroHeadlineAccent =
+    'font-semibold text-[#a7f3d0] drop-shadow-[0_0_28px_rgba(110,231,183,0.55),0_0_56px_rgba(16,185,129,0.2)]';
+
   return (
     <div className="overflow-x-hidden">
       <SEO
@@ -194,73 +208,103 @@ export default function Home() {
         keywords="software development India, web development company, custom software, mobile app development, Mumbai Delhi Bangalore, Rastogi Codeworks, digital solutions"
         jsonLd={organizationJsonLd}
       />
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex flex-col justify-center pt-28 md:pt-32 pb-20 overflow-hidden bg-white">
-        {/* Background - white + soft green fade */}
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/70 via-white to-white pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[min(100%,420px)] h-[420px] bg-emerald-100/50 rounded-bl-[12rem] blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary-50/60 rounded-tr-full blur-3xl pointer-events-none" />
+      {/* Hero Section — full-viewport image background */}
+      <section className="relative isolate flex w-full min-h-[100svh] flex-col justify-center overflow-hidden text-white max-sm:min-h-[min(100svh,900px)]">
+        <img
+          src="/herosection.png"
+          alt=""
+          width={1920}
+          height={1080}
+          decoding="async"
+          fetchPriority="high"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full min-h-full object-cover object-center select-none"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/55 via-black/40 to-black/60"
+          aria-hidden
+        />
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary-700 animate-fade-in-up">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary-500 animate-pulse" />
-            Where code meets experience
-          </p>
-          <h1 className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] font-bold tracking-tight text-slate-900 leading-[1.1] animate-fade-in-up delay-100">
-            Custom software that{' '}
-            <span className="text-primary-600">drives real growth.</span>
-          </h1>
-          <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed animate-fade-in-up delay-200">
-            We build web, mobile, and cloud solutions for startups and enterprises across India—delivered on time, built to scale.
-          </p>
+        <div className="relative z-10 mx-auto w-full max-w-3xl px-5 sm:px-6 lg:max-w-4xl lg:px-8">
+          <div className="flex flex-col items-center pb-24 text-center max-sm:pt-[max(9.25rem,calc(7rem+env(safe-area-inset-top,0px)))] max-sm:pb-28 sm:pt-36 sm:pb-24 md:pt-40 md:pb-28 lg:pt-44 lg:pb-28">
+            <h1 className="animate-fade-in-up w-full max-w-[24rem] text-balance text-[2rem] font-bold leading-[1.2] tracking-[-0.02em] text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] min-[400px]:text-[2.125rem] min-[420px]:text-[2.25rem] sm:max-w-3xl sm:text-4xl sm:leading-[1.14] sm:tracking-tight md:text-5xl md:leading-[1.1] lg:max-w-4xl lg:text-6xl lg:leading-[1.06]">
+              <span className="text-white">Turn </span>
+              <span className={heroHeadlineAccent}>visitors</span>
+              <span className="text-white"> into </span>
+              <span className={heroHeadlineAccent}>customers</span>
+              <br />
+              <span className="text-white">with </span>
+              <span className={`whitespace-nowrap ${heroHeadlineAccent}`}>AI-powered</span>
+              <span className="text-white"> websites.</span>
+            </h1>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-in-up delay-300">
-            <Link
-              to="/contact"
-              className="group inline-flex items-center gap-2 rounded-2xl bg-primary-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary-600/30 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/25 hover:-translate-y-0.5 transition-all duration-300"
+            <p
+              className="animate-fade-in-up mt-5 max-w-[21rem] text-pretty text-[0.9375rem] leading-relaxed text-white/78 sm:mt-6 sm:max-w-2xl sm:text-[1.0625rem] sm:leading-relaxed"
+              style={{ animationDelay: '140ms' }}
             >
-              Start your project
-              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-            <Link
-              to="/services"
-              className="inline-flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-700 hover:border-primary-300 hover:bg-primary-50/50 hover:text-primary-800 transition-all duration-300"
-            >
-              Our services
-            </Link>
-          </div>
+              Fast, mobile-ready pages with clear copy and forms—launched on your domain with help at every step, not
+              just a handoff file.
+            </p>
 
-          {/* Value pills */}
-          <div className="mt-12 flex flex-wrap justify-center gap-3 animate-fade-in-up" style={{ animationDelay: '350ms' }}>
-            {['On-time delivery', 'Scalable & secure', 'Pan-India support', 'Transparent pricing'].map((label, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary-100 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm"
+            {/* Trust facts — single line on mobile; glass pill from sm */}
+            <div
+              className="animate-fade-in-up delay-200 mt-6 w-full max-w-lg px-0.5 sm:mt-8 sm:max-w-none sm:px-0"
+              style={{ animationDelay: '240ms' }}
+            >
+              <div className="sm:inline-flex sm:max-w-full sm:flex-wrap sm:items-center sm:justify-center sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/25 sm:bg-white/10 sm:px-7 sm:py-3.5 sm:shadow-lg sm:shadow-black/20 sm:backdrop-blur-md">
+                <p className="text-center text-[13px] font-medium leading-relaxed text-white/90 min-[380px]:text-sm sm:text-sm sm:leading-snug">
+                  <span className="font-semibold text-white">Starting from ₹10,999</span>
+                  <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
+                    |
+                  </span>
+                  <span>Delivered in 3–5 days</span>
+                  <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
+                    |
+                  </span>
+                  <span>100% support included</span>
+                </p>
+              </div>
+            </div>
+
+            {/* CTAs — one row on mobile; comfortable min-widths from sm */}
+            <div className="animate-fade-in-up delay-300 mx-auto mt-10 flex w-full max-w-[24rem] flex-row items-stretch justify-center gap-2 min-[360px]:gap-2.5 sm:mt-10 sm:max-w-none sm:gap-4">
+              <Link
+                to="/contact"
+                className="group inline-flex min-h-[3.25rem] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-primary-600 px-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition-all duration-200 active:scale-[0.98] hover:bg-primary-500 min-[400px]:gap-2.5 min-[400px]:px-4 min-[400px]:text-base sm:min-h-0 sm:h-[3.25rem] sm:flex-initial sm:rounded-xl sm:px-8 sm:text-[15px] sm:w-auto sm:min-w-[200px]"
               >
-                <svg className="h-4 w-4 text-primary-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                {label}
-              </span>
-            ))}
+                <span className="truncate sm:hidden">Book a call</span>
+                <span className="hidden sm:inline">Book a free call</span>
+                <ArrowRight className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 min-[400px]:h-5 min-[400px]:w-5 sm:h-5 sm:w-5" />
+              </Link>
+              <Link
+                to="/pricing"
+                className="inline-flex min-h-[3.25rem] min-w-0 flex-1 items-center justify-center rounded-2xl border-2 border-white/70 bg-white/[0.12] px-3 text-sm font-semibold text-white shadow-lg shadow-black/15 backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 active:scale-[0.98] hover:border-white hover:bg-white/25 hover:backdrop-blur-2xl min-[400px]:px-4 min-[400px]:text-base sm:min-h-0 sm:h-[3.25rem] sm:flex-initial sm:rounded-xl sm:border sm:px-8 sm:text-[15px] sm:w-auto sm:min-w-[200px]"
+              >
+                View pricing
+              </Link>
+            </div>
           </div>
-
         </div>
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-slate-400">
-          <svg className="w-5 h-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="pointer-events-none absolute bottom-5 left-1/2 hidden -translate-x-1/2 text-white/50 sm:block">
+          <svg className="h-5 w-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </section>
 
       {/* Logo Marquee */}
-      <section className="py-10 border-y border-primary-100 bg-primary-50/30 overflow-hidden">
-        <p className="text-center text-sm font-medium text-primary-600 uppercase tracking-widest mb-8">Trusted by innovative teams</p>
-        <div className="relative flex overflow-x-hidden group">
-          <div className="animate-marquee whitespace-nowrap flex gap-16 items-center">
+      <section className="border-y border-primary-100 bg-primary-50/30 py-8 pb-28 overflow-hidden max-sm:pb-[7.5rem] sm:py-10 sm:pb-10">
+        <p className="mx-auto max-w-[16rem] px-2 text-center text-[10px] font-semibold uppercase leading-snug tracking-[0.2em] text-primary-600 sm:max-w-none sm:text-sm sm:tracking-widest mb-6 sm:mb-8">
+          Trusted by innovative teams
+        </p>
+        <div className="relative flex overflow-x-hidden px-1 group">
+          <div className="animate-marquee flex items-center gap-10 whitespace-nowrap sm:gap-16">
             {[...logos, ...logos, ...logos].map((logo, i) => (
-              <span key={i} className="text-2xl font-bold text-primary-300/80 hover:text-primary-400 transition-colors cursor-default">
+              <span
+                key={i}
+                className="text-lg font-bold text-primary-300/90 sm:text-2xl sm:text-primary-300/80 hover:text-primary-400 transition-colors cursor-default"
+              >
                 {logo}
               </span>
             ))}
@@ -288,10 +332,8 @@ export default function Home() {
                   {services[1].icon}
                 </div>
                 <h3 className="text-2xl font-bold text-primary-950 mb-3">{services[1].title}</h3>
-                <p className="text-slate-600 leading-relaxed text-pretty mb-6">{services[1].desc}</p>
-                <Link to={`/services/${services[1].id}`} className="inline-flex items-center gap-2 text-primary-600 font-semibold group-hover:gap-3 transition-all">
-                  View More <span aria-hidden="true">&rarr;</span>
-                </Link>
+                <p className="text-slate-600 leading-relaxed text-pretty mb-0">{services[1].desc}</p>
+                <ServiceCardActions serviceId={services[1].id} variant="large" className="mt-6" />
               </div>
             </div>
             <div className="group relative p-6 rounded-3xl bg-white border border-primary-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-500 overflow-hidden hover:-translate-y-1 md:flex md:flex-col md:justify-center">
@@ -301,10 +343,8 @@ export default function Home() {
                   {services[0].icon}
                 </div>
                 <h3 className="text-xl font-bold text-primary-950 mb-2">{services[0].title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-4">{services[0].desc}</p>
-                <Link to={`/services/${services[0].id}`} className="inline-flex items-center gap-2 text-primary-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                  View More <span aria-hidden="true">&rarr;</span>
-                </Link>
+                <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-0">{services[0].desc}</p>
+                <ServiceCardActions serviceId={services[0].id} className="mt-4" />
               </div>
             </div>
           </div>
@@ -319,10 +359,8 @@ export default function Home() {
                   {services[3].icon}
                 </div>
                 <h3 className="text-2xl font-bold text-primary-950 mb-3">{services[3].title}</h3>
-                <p className="text-slate-600 leading-relaxed text-pretty mb-6">{services[3].desc}</p>
-                <Link to={`/services/${services[3].id}`} className="inline-flex items-center gap-2 text-primary-600 font-semibold group-hover:gap-3 transition-all">
-                  View More <span aria-hidden="true">&rarr;</span>
-                </Link>
+                <p className="text-slate-600 leading-relaxed text-pretty mb-0">{services[3].desc}</p>
+                <ServiceCardActions serviceId={services[3].id} variant="large" className="mt-6" />
               </div>
             </div>
             <div className="group relative p-6 rounded-3xl bg-white border border-primary-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-500 overflow-hidden hover:-translate-y-1 md:flex md:flex-col md:justify-center">
@@ -332,10 +370,8 @@ export default function Home() {
                   {services[2].icon}
                 </div>
                 <h3 className="text-xl font-bold text-primary-950 mb-2">{services[2].title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-4">{services[2].desc}</p>
-                <Link to={`/services/${services[2].id}`} className="inline-flex items-center gap-2 text-primary-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                  View More <span aria-hidden="true">&rarr;</span>
-                </Link>
+                <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-0">{services[2].desc}</p>
+                <ServiceCardActions serviceId={services[2].id} className="mt-4" />
               </div>
             </div>
           </div>
@@ -343,9 +379,9 @@ export default function Home() {
           {/* Row 3: All three last services in one row */}
           <AnimateOnScroll variant="up" delay={160}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {services.slice(4).map((service, i) => (
+            {services.slice(4).map((service) => (
               <div
-                key={i + 4}
+                key={service.id}
                 className="group relative p-6 rounded-3xl bg-white border border-primary-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-500 overflow-hidden hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary-50 to-primary-100 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-150 duration-700 ease-out opacity-50" />
@@ -354,10 +390,8 @@ export default function Home() {
                     {service.icon}
                   </div>
                   <h3 className="text-xl font-bold text-primary-950 mb-2">{service.title}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-4">{service.desc}</p>
-                  <Link to={`/services/${service.id}`} className="inline-flex items-center gap-2 text-primary-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                    View More <span aria-hidden="true">&rarr;</span>
-                  </Link>
+                  <p className="text-slate-600 text-sm leading-relaxed text-pretty mb-0">{service.desc}</p>
+                  <ServiceCardActions serviceId={service.id} className="mt-4" />
                 </div>
               </div>
             ))}
@@ -532,6 +566,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Testimonials - Infinite Scroll (before brochure) */}
+      <section className="py-24 bg-primary-950 overflow-hidden relative">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03]" />
+
+        <div className="relative z-10 mx-auto mb-16 max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="mb-4 text-3xl font-bold text-white md:text-5xl">Loved by Founders</h2>
+          <p className="text-lg text-primary-200/80 md:text-xl">Don&apos;t just take our word for it.</p>
+        </div>
+
+        <div className="relative w-full">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-primary-950 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-primary-950 to-transparent" />
+
+          <div className="flex w-max animate-marquee gap-8 hover:[animation-play-state:paused]">
+            {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
+              <div
+                key={i}
+                className="flex w-[400px] flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-colors duration-300 hover:bg-white/10"
+              >
+                <div>
+                  <div className="mb-4 flex text-primary-400">
+                    {[...Array(5)].map((_, j) => (
+                      <svg key={j} className="h-5 w-5 fill-current" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.603-.921 1.902 0 l 1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="mb-6 text-lg italic leading-relaxed text-primary-100/90">&quot;{t.quote}&quot;</p>
+                </div>
+
+                <div className="mt-auto flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-600 text-xl font-bold text-white shadow-lg">
+                    {t.author[0]}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">{t.author}</div>
+                    <div className="text-sm text-primary-400">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Brochure - Download PDF */}
       <section className="py-24 bg-white relative overflow-hidden" aria-labelledby="brochure-heading">
@@ -561,9 +639,7 @@ export default function Home() {
                 <div className="flex-shrink-0">
                   <a
                     href="/Rastogicodeworks-Broucher.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download="Rastogi-Codeworks-Brochure.pdf"
+                    download="Rastogicodeworks-Broucher.pdf"
                     className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-primary-600 text-white font-semibold text-base shadow-lg shadow-primary-500/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -629,121 +705,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials - Infinite Scroll */}
-      <section className="py-24 bg-primary-950 overflow-hidden relative">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03]" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 text-center relative z-10">
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Loved by Founders</h2>
-          <p className="text-lg text-primary-200/60">Don't just take our word for it.</p>
-        </div>
-
-        <div className="relative w-full">
-          {/* Gradient Masks */}
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-primary-950 to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-primary-950 to-transparent z-10 pointer-events-none" />
-          
-          {/* Scrolling Track */}
-          <div className="flex animate-marquee gap-8 w-max hover:[animation-play-state:paused]">
-            {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
-              <div 
-                key={i} 
-                className="w-[400px] bg-white/5 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/10 transition-colors duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex text-primary-400 mb-4">
-                    {[...Array(5)].map((_, j) => (
-                      <svg key={j} className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.603-.921 1.902 0 l 1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <p className="text-primary-100/90 mb-6 italic text-lg leading-relaxed">"{t.quote}"</p>
-                </div>
-                
-                <div className="flex items-center gap-4 mt-auto">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center font-bold text-white text-xl shadow-lg shrink-0">
-                    {t.author[0]}
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">{t.author}</div>
-                    <div className="text-sm text-primary-400">{t.role}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Latest from the blog - content marketing */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimateOnScroll variant="up" className="flex flex-col md:flex-row justify-between items-center md:items-end gap-4 mb-10">
-            <div>
-              <h2 className="text-3xl md:text-5xl font-bold text-primary-950 mb-4">Latest from the blog</h2>
-              <p className="text-lg text-slate-600 max-w-xl">
-                Insights on software strategy, agile delivery, and building products that scale.
-              </p>
-            </div>
-            <Link
-              to="/blog"
-              className="inline-flex items-center gap-2 text-primary-600 font-semibold hover:text-primary-700 transition-colors shrink-0"
-            >
-              View all posts <ArrowRight className="w-5 h-5" />
-            </Link>
-          </AnimateOnScroll>
-          <div className="grid md:grid-cols-3 gap-6">
-            {getLatestPosts(3).map((post, i) => (
-              <AnimateOnScroll key={post.slug} variant="up" delay={i * 80}>
-                <Link
-                  to={`/blog/${post.slug}`}
-                  className="block rounded-2xl border border-primary-100 bg-white p-6 shadow-sm hover:shadow-lg hover:border-primary-200 transition-all duration-300 group"
-                >
-                  <span className="text-xs font-semibold text-primary-600 uppercase tracking-wider">{post.category}</span>
-                  <h3 className="text-xl font-bold text-primary-950 mt-2 mb-2 group-hover:text-primary-700 transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-slate-600 text-sm line-clamp-2">{post.excerpt}</p>
-                  <span className="inline-flex items-center gap-1 text-primary-600 font-semibold text-sm mt-4 group-hover:gap-2 transition-all">
-                    Read article <ArrowRight className="w-4 h-4" />
-                  </span>
-                </Link>
-              </AnimateOnScroll>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Locations - modern, aesthetic, SEO-optimized */}
-      <section className="relative py-20 md:py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary-50/40 via-white to-primary-50/30" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary-200/20 blur-3xl pointer-events-none" />
-        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimateOnScroll variant="scale">
-          <div className="rounded-3xl border border-primary-100/80 bg-white/80 backdrop-blur-sm shadow-lg shadow-primary-500/5 p-8 md:p-10 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-200/60 text-primary-700 text-sm font-medium mb-6">
-              <MapPin className="w-4 h-4 text-primary-600" />
-              <span>Pan-India</span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-primary-950 mb-4 tracking-tight">
-              Best Services in All Cities & States of India
-            </h2>
-            <p className="text-slate-600 text-base md:text-lg leading-relaxed mb-8 max-w-xl mx-auto">
-              We deliver software development and digital solutions across every state and union territory in India - from metros to tier‑2 cities.
-            </p>
-            <Link
-              to="/services#services-grid"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary-600 text-white font-semibold shadow-lg shadow-primary-500/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              View our services
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-            </Link>
-          </div>
-          </AnimateOnScroll>
         </div>
       </section>
 

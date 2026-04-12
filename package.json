@@ -8,6 +8,10 @@
     "client": "cd client && npm run dev",
     "server": "cd server && npm run dev",
     "build": "cd client && npm run build",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "excel:pricing": "node scripts/generate-pricing-excel.mjs"
+  },
+  "devDependencies": {
+    "xlsx": "^0.18.5"
   }
 }

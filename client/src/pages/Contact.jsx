@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Linkedin, CheckCircle, ArrowRight } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
-
-const FORMSPREE_URL = 'https://formspree.io/f/xdalgpab';
+import { FORMSPREE_CONTACT_URL } from '../config/formspree';
+import { services } from '../data/services';
 
 const emailSubject = 'Enquiry from your website';
 const emailBody = `Hey,
@@ -58,7 +58,14 @@ function WhatsAppIcon({ className }) {
 }
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    service: '',
+    subject: '',
+    message: '',
+  });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -71,7 +78,7 @@ export default function Contact() {
     setStatus(null);
     setLoading(true);
     try {
-      const res = await fetch(FORMSPREE_URL, {
+      const res = await fetch(FORMSPREE_CONTACT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -79,7 +86,7 @@ export default function Contact() {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok !== false) {
         setStatus({ type: 'success', message: 'Thank you! We will get back to you soon.' });
-        setForm({ name: '', email: '', phone: '', subject: '', message: '' });
+        setForm({ name: '', email: '', phone: '', service: '', subject: '', message: '' });
       } else {
         setStatus({ type: 'error', message: data.error || 'Something went wrong. Please try again.' });
       }
@@ -237,17 +244,38 @@ export default function Contact() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="subject" className="block text-sm font-semibold text-slate-700 mb-2">Subject</label>
-                      <input
-                        id="subject"
-                        name="subject"
-                        type="text"
-                        value={form.subject}
+                      <label htmlFor="service" className="block text-sm font-semibold text-slate-700 mb-2">Service *</label>
+                      <select
+                        id="service"
+                        name="service"
+                        required
+                        value={form.service}
                         onChange={handleChange}
-                        className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white outline-none transition placeholder:text-slate-400"
-                        placeholder="Project or inquiry"
-                      />
+                        className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white outline-none transition text-slate-900 cursor-pointer"
+                      >
+                        <option value="" disabled>
+                          Select a service
+                        </option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.title}>
+                            {s.title}
+                          </option>
+                        ))}
+                        <option value="Other / multiple services">Other / multiple services</option>
+                      </select>
                     </div>
+                  </div>
+                  <div>
+                    <label htmlFor="subject" className="block text-sm font-semibold text-slate-700 mb-2">Subject</label>
+                    <input
+                      id="subject"
+                      name="subject"
+                      type="text"
+                      value={form.subject}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white outline-none transition placeholder:text-slate-400"
+                      placeholder="Project or inquiry"
+                    />
                   </div>
                   <div>
                     <label htmlFor="message" className="block text-sm font-semibold text-slate-700 mb-2">Message *</label>

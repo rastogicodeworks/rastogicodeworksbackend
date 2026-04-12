@@ -1,10 +1,14 @@
 /**
- * Floating WhatsApp button with official WhatsApp icon.
- * Set VITE_WHATSAPP_NUMBER in .env to override (e.g. 919876543210 for India, no + or spaces).
- * Optional VITE_WHATSAPP_MESSAGE for pre-filled message.
+ * Floating Call + WhatsApp buttons (vertical stack, bottom-right).
+ * Set VITE_WHATSAPP_NUMBER in .env (e.g. 919876543210 for India, no + or spaces).
+ * Optional VITE_PHONE_NUMBER for tel: links; defaults to the WhatsApp number.
+ * Optional VITE_WHATSAPP_MESSAGE for pre-filled chat text.
  */
 const WHATSAPP_NUMBER = (import.meta.env.VITE_WHATSAPP_NUMBER || '918859985607').replace(/\D/g, '');
-const DEFAULT_MESSAGE = import.meta.env.VITE_WHATSAPP_MESSAGE || 'Hi, I visited your website and would like to know more about your services.';
+const PHONE_DIGITS = (import.meta.env.VITE_PHONE_NUMBER || WHATSAPP_NUMBER).replace(/\D/g, '');
+const DEFAULT_MESSAGE =
+  import.meta.env.VITE_WHATSAPP_MESSAGE ||
+  'Hey, I am reaching out from your website. I would like to connect with Rastogi Codeworks. Could we schedule a call?';
 
 function WhatsAppIcon({ className = 'w-6 h-6' }) {
   return (
@@ -19,23 +23,58 @@ function WhatsAppIcon({ className = 'w-6 h-6' }) {
   );
 }
 
+function PhoneIcon({ className = 'w-6 h-6' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+      />
+    </svg>
+  );
+}
+
+const fabBase =
+  'flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white/90 sm:h-14 sm:w-14';
+
 export default function WhatsAppButton() {
   if (!WHATSAPP_NUMBER) return null;
 
   const url = new URL('https://wa.me/' + WHATSAPP_NUMBER);
   url.searchParams.set('text', DEFAULT_MESSAGE);
+  const telHref = PHONE_DIGITS ? `tel:+${PHONE_DIGITS}` : null;
 
   return (
-    <a
-      href={url.toString()}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Chat on WhatsApp"
-      className="fixed z-[80] flex items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 hover:bg-[#20BD5A] hover:shadow-xl hover:shadow-[#25D366]/40 hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#25D366]/80 focus:ring-offset-2 focus:ring-offset-white transition-all duration-300
-        h-12 w-12 right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))]
-        sm:h-14 sm:w-14 sm:right-6 sm:bottom-[5.75rem]"
+    <div
+      className="fixed z-[80] flex flex-col items-center gap-3 sm:gap-3.5
+        right-3 sm:right-5 md:right-6 lg:right-8
+        bottom-[calc(2.25rem+env(safe-area-inset-bottom,0px))]
+        sm:bottom-[calc(2.75rem+env(safe-area-inset-bottom,0px))]
+        md:bottom-[calc(3rem+env(safe-area-inset-bottom,0px))]
+        lg:bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))]
+        xl:bottom-[calc(4rem+env(safe-area-inset-bottom,0px))]"
+      role="group"
+      aria-label="Quick contact"
     >
-      <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7" />
-    </a>
+      {telHref ? (
+        <a
+          href={telHref}
+          aria-label="Call us"
+          className={`${fabBase} bg-primary-600 shadow-primary-600/35 hover:bg-primary-500 hover:shadow-xl hover:shadow-primary-600/40 focus:ring-primary-500/80`}
+        >
+          <PhoneIcon className="w-6 h-6 sm:w-7 sm:h-7" />
+        </a>
+      ) : null}
+      <a
+        href={url.toString()}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        className={`${fabBase} bg-[#25D366] shadow-[#25D366]/30 hover:bg-[#20BD5A] hover:shadow-xl hover:shadow-[#25D366]/40 focus:ring-[#25D366]/80`}
+      >
+        <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7" />
+      </a>
+    </div>
   );
 }
