@@ -6,6 +6,8 @@ const UserSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ['admin', 'client'], required: true, default: 'client' },
     name: { type: String, trim: true },
+    gstNumber: { type: String, trim: true },
+    billingAddress: { type: String, trim: true },
   },
   { timestamps: true },
 );

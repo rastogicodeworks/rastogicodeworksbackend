@@ -52,14 +52,20 @@ import API_BASE from '../config/api';
 import { getAuthHeaders, clearAuthToken } from '../config/auth';
 
 const emptyItem = { description: '', quantity: 1, price: 0 };
-const emptyTerm = { label: '', percentage: '', dueDate: '' };
+const emptyTerm = { label: '', percentage: '', dueDate: '', status: 'due', partialAmount: '' };
+const PAYMENT_TERM_STATUSES = [
+  { value: 'due', label: 'Due' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'partially_paid', label: 'Partially Paid' },
+  { value: 'overdue', label: 'Overdue' },
+];
 
 const PAYMENT_PRESETS = [
-  { label: '100%', terms: [{ label: 'Full Payment', percentage: 100, dueDate: '' }] },
-  { label: '50/50', terms: [{ label: 'Advance', percentage: 50, dueDate: '' }, { label: 'Final', percentage: 50, dueDate: '' }] },
-  { label: '30/30/40', terms: [{ label: 'Advance', percentage: 30, dueDate: '' }, { label: 'Milestone', percentage: 30, dueDate: '' }, { label: 'Final', percentage: 40, dueDate: '' }] },
-  { label: '25/25/50', terms: [{ label: 'Advance', percentage: 25, dueDate: '' }, { label: 'Milestone', percentage: 25, dueDate: '' }, { label: 'Final', percentage: 50, dueDate: '' }] },
-  { label: '10/20/30/40', terms: [{ label: 'Booking', percentage: 10, dueDate: '' }, { label: 'Design', percentage: 20, dueDate: '' }, { label: 'Development', percentage: 30, dueDate: '' }, { label: 'Final', percentage: 40, dueDate: '' }] },
+  { label: '100%', terms: [{ label: 'Full Payment', percentage: 100, dueDate: '', status: 'due', partialAmount: '' }] },
+  { label: '50/50', terms: [{ label: 'Advance', percentage: 50, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Final', percentage: 50, dueDate: '', status: 'due', partialAmount: '' }] },
+  { label: '30/30/40', terms: [{ label: 'Advance', percentage: 30, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Milestone', percentage: 30, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Final', percentage: 40, dueDate: '', status: 'due', partialAmount: '' }] },
+  { label: '25/25/50', terms: [{ label: 'Advance', percentage: 25, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Milestone', percentage: 25, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Final', percentage: 50, dueDate: '', status: 'due', partialAmount: '' }] },
+  { label: '10/20/30/40', terms: [{ label: 'Booking', percentage: 10, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Design', percentage: 20, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Development', percentage: 30, dueDate: '', status: 'due', partialAmount: '' }, { label: 'Final', percentage: 40, dueDate: '', status: 'due', partialAmount: '' }] },
 ];
 
 function calculateInvoiceTotals(items) {
@@ -82,6 +88,7 @@ export default function AdminDashboard() {
   const [invoiceStatus, setInvoiceStatus] = useState('unpaid');
   const [items, setItems] = useState([{ ...emptyItem }]);
   const [notes, setNotes] = useState('');
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
   // Invoice management state
   const [invoices, setInvoices] = useState([]);
@@ -153,19 +160,88 @@ export default function AdminDashboard() {
   };
 
   const [invoiceClientEmail, setInvoiceClientEmail] = useState(''); // link invoice to portal client (for Clients table)
+  const [linkedPartialInvoiceId, setLinkedPartialInvoiceId] = useState('');
   const [paymentTerms, setPaymentTerms] = useState([]);
   const [showPaymentTerms, setShowPaymentTerms] = useState(false);
 
   const addPaymentTerm = () => setPaymentTerms((prev) => [...prev, { ...emptyTerm }]);
   const removePaymentTerm = (i) => setPaymentTerms((prev) => prev.filter((_, idx) => idx !== i));
   const handleTermChange = (i, field, value) => {
-    setPaymentTerms((prev) => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
+    setPaymentTerms((prev) => prev.map((t, idx) => {
+      if (idx !== i) return t;
+      if (field === 'status') {
+        return { ...t, status: value, partialAmount: value === 'partially_paid' ? t.partialAmount : '' };
+      }
+      return { ...t, [field]: value };
+    }));
   };
   const applyPreset = (preset) => {
     setPaymentTerms(preset.terms.map((t) => ({ ...t })));
     setShowPaymentTerms(true);
   };
   const termsTotalPct = paymentTerms.reduce((s, t) => s + (Number(t.percentage) || 0), 0);
+  const hasPaymentTerms = paymentTerms.some((t) => Number(t?.percentage) > 0);
+  const paidAmountFromTerms = useMemo(() => {
+    const invoiceTotal = Number(totals.total) || 0;
+    if (invoiceTotal <= 0 || !hasPaymentTerms) return 0;
+    return paymentTerms.reduce((sum, term) => {
+      const pct = Number(term?.percentage) || 0;
+      if (pct <= 0) return sum;
+      const termAmount = invoiceTotal * pct / 100;
+      const termStatus = String(term?.status || 'due');
+      if (termStatus === 'paid') return sum + termAmount;
+      if (termStatus === 'partially_paid') {
+        const partial = Number(term?.partialAmount) || 0;
+        return sum + Math.min(Math.max(partial, 0), termAmount);
+      }
+      return sum;
+    }, 0);
+  }, [hasPaymentTerms, paymentTerms, totals.total]);
+  const autoInvoiceStatus = useMemo(() => {
+    if (!hasPaymentTerms) return null;
+    const invoiceTotal = Number(totals.total) || 0;
+    if (invoiceTotal <= 0) return 'unpaid';
+    if (paidAmountFromTerms <= 0) return 'unpaid';
+    if (paidAmountFromTerms >= invoiceTotal - 0.01) return 'paid';
+    return 'partially_paid';
+  }, [hasPaymentTerms, paidAmountFromTerms, totals.total]);
+  useEffect(() => {
+    if (!autoInvoiceStatus) return;
+    setInvoiceStatus(autoInvoiceStatus);
+  }, [autoInvoiceStatus]);
+  useEffect(() => {
+    if (!(invoiceStatus === 'partially_paid' || invoiceStatus === 'paid') && linkedPartialInvoiceId) {
+      setLinkedPartialInvoiceId('');
+    }
+  }, [invoiceStatus, linkedPartialInvoiceId]);
+  const linkedClientPreviousDue = useMemo(() => {
+    const selectedEmail = String(invoiceClientEmail || '').trim().toLowerCase();
+    if (!selectedEmail) return 0;
+    return invoices.reduce((sum, inv) => {
+      if (editingInvoiceId && String(inv._id) === String(editingInvoiceId)) return sum;
+      const invEmail = String(inv.clientEmail || '').trim().toLowerCase();
+      if (invEmail !== selectedEmail) return sum;
+      if (inv.status === 'paid') return sum;
+      return sum + (Number(inv.balanceDue ?? inv.total) || 0);
+    }, 0);
+  }, [invoices, invoiceClientEmail, editingInvoiceId]);
+  const linkableClientInvoices = useMemo(() => {
+    const selectedEmail = String(invoiceClientEmail || '').trim().toLowerCase();
+    if (!selectedEmail) return [];
+    return invoices.filter((inv) => {
+      if (editingInvoiceId && String(inv._id) === String(editingInvoiceId)) return false;
+      const invEmail = String(inv.clientEmail || '').trim().toLowerCase();
+      return invEmail === selectedEmail && inv.status !== 'paid';
+    });
+  }, [invoices, invoiceClientEmail, editingInvoiceId]);
+  const invoiceTotal = Number(totals.total) || 0;
+  const settledOnCurrentInvoice = hasPaymentTerms
+    ? Math.min(invoiceTotal, paidAmountFromTerms)
+    : (invoiceStatus === 'paid' ? invoiceTotal : 0);
+  const currentInvoiceOutstanding = Math.max(0, invoiceTotal - settledOnCurrentInvoice);
+  const totalBalanceDue = linkedPartialInvoiceId
+    ? Math.max(0, linkedClientPreviousDue - settledOnCurrentInvoice)
+    : linkedClientPreviousDue + currentInvoiceOutstanding;
 
   const resetForm = () => {
     setClientName('');
@@ -177,8 +253,10 @@ export default function AdminDashboard() {
     setItems([{ ...emptyItem }]);
     setNotes('');
     setInvoiceClientEmail('');
+    setLinkedPartialInvoiceId('');
     setPaymentTerms([]);
     setShowPaymentTerms(false);
+    setEditingInvoiceId(null);
   };
 
   const handleCreateInvoice = (e) => {
@@ -190,6 +268,9 @@ export default function AdminDashboard() {
       clientEmail: invoiceClientEmail.trim() || undefined,
       billingAddress: billingAddress.trim() || undefined,
       gstNumber: clientGst.trim() || undefined,
+      previousBalanceDue: linkedClientPreviousDue,
+      balanceDue: totalBalanceDue,
+      linkedPartialInvoiceId: linkedPartialInvoiceId || undefined,
       invoiceDate,
       dueDate,
       status: invoiceStatus,
@@ -201,8 +282,9 @@ export default function AdminDashboard() {
     setLoading(true);
     setError('');
 
-    fetch(`${API_BASE}/api/invoices`, {
-      method: 'POST',
+    const isEdit = !!editingInvoiceId;
+    fetch(isEdit ? `${API_BASE}/api/invoices/${editingInvoiceId}` : `${API_BASE}/api/invoices`, {
+      method: isEdit ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
       body: JSON.stringify(payload),
@@ -216,21 +298,57 @@ export default function AdminDashboard() {
         }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || 'Failed to create invoice');
+          throw new Error(data.message || (isEdit ? 'Failed to update invoice' : 'Failed to create invoice'));
         }
         return res.json();
       })
       .then((data) => {
         if (data?.invoice) {
-          setInvoices((prev) => [data.invoice, ...prev]);
+          setInvoices((prev) => (
+            isEdit
+              ? prev.map((inv) => (inv._id === data.invoice._id ? data.invoice : inv))
+              : [data.invoice, ...prev]
+          ));
           resetForm();
           setActiveSection('invoices');
         }
       })
       .catch((err) => {
-        setError(err.message || 'Something went wrong while creating the invoice.');
+        setError(err.message || (isEdit ? 'Something went wrong while updating the invoice.' : 'Something went wrong while creating the invoice.'));
       })
       .finally(() => setLoading(false));
+  };
+
+  const openEditInvoice = (inv) => {
+    setEditingInvoiceId(inv._id);
+    setClientName(inv.clientName || '');
+    setClientGst(inv.gstNumber || '');
+    setBillingAddress(inv.billingAddress || '');
+    setInvoiceDate(inv.invoiceDate || new Date().toISOString().slice(0, 10));
+    setDueDate(inv.dueDate || '');
+    setInvoiceStatus(inv.status || 'unpaid');
+    setItems((inv.items && inv.items.length > 0)
+      ? inv.items.map((item) => ({
+        description: item.description || '',
+        quantity: Number(item.quantity) || 0,
+        price: Number(item.price) || 0,
+      }))
+      : [{ ...emptyItem }]);
+    setNotes(inv.notes || '');
+    setInvoiceClientEmail(inv.clientEmail || '');
+    setLinkedPartialInvoiceId(inv.linkedPartialInvoiceId || '');
+    const normalizedTerms = Array.isArray(inv.paymentTerms)
+      ? inv.paymentTerms.map((t) => ({
+        label: t.label || '',
+        percentage: t.percentage ?? '',
+        dueDate: t.dueDate || '',
+        status: t.status || 'due',
+        partialAmount: t.partialAmount ?? '',
+      }))
+      : [];
+    setPaymentTerms(normalizedTerms);
+    setShowPaymentTerms(normalizedTerms.length > 0);
+    setActiveSection('create');
   };
 
   const updateInvoiceStatus = (id, status) => {
@@ -403,7 +521,7 @@ export default function AdminDashboard() {
         dueDate,
         items,
         notes,
-        totals,
+        totals: { ...totals, previousBalanceDue: linkedClientPreviousDue, balanceDue: totalBalanceDue },
         paymentTerms: paymentTerms.filter((t) => Number(t.percentage) > 0),
         invoiceId: `INV-${Date.now().toString().slice(-6)}`,
       });
@@ -411,6 +529,53 @@ export default function AdminDashboard() {
       setError(err?.message || 'Failed to generate PDF.');
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadInstallmentPdf = async (term, index) => {
+    try {
+      const invoiceTotal = Number(totals.total) || 0;
+      const pct = Number(term?.percentage) || 0;
+      const installmentAmount = invoiceTotal * pct / 100;
+      const status = String(term?.status || 'due');
+      const partialAmount = Math.max(0, Number(term?.partialAmount) || 0);
+      const settled = status === 'paid'
+        ? installmentAmount
+        : status === 'partially_paid'
+          ? Math.min(partialAmount, installmentAmount)
+          : 0;
+      const installmentOutstanding = Math.max(0, installmentAmount - settled);
+
+      await downloadInvoicePdf({
+        clientName: clientName || 'Client Name',
+        billingAddress: billingAddress.trim() || undefined,
+        gstNumber: clientGst.trim() || undefined,
+        invoiceDate,
+        dueDate: term?.dueDate || dueDate,
+        items: [{
+          description: term?.label || `Installment ${index + 1}`,
+          quantity: 1,
+          price: installmentAmount,
+        }],
+        notes: `${notes || ''}${notes ? '\n\n' : ''}Installment status: ${status.replace(/_/g, ' ')}`,
+        totals: {
+          subtotal: installmentAmount,
+          total: installmentAmount,
+          previousBalanceDue: 0,
+          balanceDue: installmentOutstanding,
+        },
+        paymentTerms: [{
+          label: term?.label || `Installment ${index + 1}`,
+          // Installment invoice represents this single term as 100% of itself.
+          percentage: 100,
+          dueDate: term?.dueDate || '',
+          status,
+          partialAmount: settled,
+        }],
+        invoiceId: `INST-${Date.now().toString().slice(-6)}`,
+      });
+    } catch (err) {
+      setError(err?.message || 'Failed to download installment invoice.');
     }
   };
 
@@ -425,7 +590,12 @@ export default function AdminDashboard() {
         dueDate: inv.dueDate || '',
         items: inv.items || [],
         notes: inv.notes || '',
-        totals: { subtotal: inv.subtotal ?? inv.total ?? 0, total: inv.total ?? 0 },
+        totals: {
+          subtotal: inv.subtotal ?? inv.total ?? 0,
+          total: inv.total ?? 0,
+          previousBalanceDue: inv.previousBalanceDue ?? 0,
+          balanceDue: inv.balanceDue ?? inv.total ?? 0,
+        },
         paymentTerms: inv.paymentTerms || [],
         invoiceId: String(inv._id).slice(-6).toUpperCase(),
       });
@@ -1278,11 +1448,13 @@ export default function AdminDashboard() {
                           className="h-12 w-12 object-contain shrink-0"
                         />
                         <div>
-                          <h2 className="text-xl font-bold text-primary-950">Invoice Details</h2>
+                          <h2 className="text-xl font-bold text-primary-950">{editingInvoiceId ? 'Edit Invoice' : 'Invoice Details'}</h2>
                           <p className="text-xs font-medium text-primary-600 mt-0.5">Rastogi Codeworks</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-200">Draft</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-200">
+                        {editingInvoiceId ? 'Editing' : 'Draft'}
+                      </span>
                     </div>
 
                     <div className="space-y-5 sm:space-y-6">
@@ -1321,9 +1493,14 @@ export default function AdminDashboard() {
                             <select
                               value={invoiceClientEmail}
                               onChange={(e) => {
-                                setInvoiceClientEmail(e.target.value);
-                                const c = clients.find((x) => x.email === e.target.value);
-                                if (c && c.name && !clientName) setClientName(c.name);
+                                const selectedEmail = e.target.value;
+                                setInvoiceClientEmail(selectedEmail);
+                                setLinkedPartialInvoiceId('');
+                                const c = clients.find((x) => x.email === selectedEmail);
+                                if (!selectedEmail || !c) return;
+                                if (c.name) setClientName(c.name);
+                                setClientGst(c.gstNumber || '');
+                                setBillingAddress(c.billingAddress || '');
                               }}
                               className="w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base cursor-pointer"
                             >
@@ -1335,6 +1512,26 @@ export default function AdminDashboard() {
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           </div>
                           <p className="text-[10px] text-slate-500 ml-1">Shows this invoice under that client in Clients.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Link partial payment to old invoice (optional)</label>
+                          <div className="relative">
+                            <select
+                              value={linkedPartialInvoiceId}
+                              onChange={(e) => setLinkedPartialInvoiceId(e.target.value)}
+                              disabled={!(invoiceStatus === 'partially_paid' || invoiceStatus === 'paid') || !invoiceClientEmail || linkableClientInvoices.length === 0}
+                              className="w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              <option value="">— None —</option>
+                              {linkableClientInvoices.map((inv) => (
+                                <option key={inv._id} value={inv._id}>
+                                  #{String(inv._id).slice(-6)} - Rs. {(inv.balanceDue ?? inv.total ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({inv.status})
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                          </div>
+                          <p className="text-[10px] text-slate-500 ml-1">Enable by setting invoice status to Partially Paid or Paid. Visible on dashboard only.</p>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Billing Address</label>
@@ -1352,15 +1549,21 @@ export default function AdminDashboard() {
                             <select
                               value={invoiceStatus}
                               onChange={(e) => setInvoiceStatus(e.target.value)}
+                              disabled={hasPaymentTerms}
                               className="w-full appearance-none px-4 py-3 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base cursor-pointer"
                             >
                               <option value="unpaid">Unpaid</option>
+                              <option value="partially_paid">Partially Paid</option>
                               <option value="paid">Paid</option>
                               <option value="overdue">Overdue</option>
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           </div>
-                          <p className="text-[10px] text-slate-500 ml-1">Payment status for this invoice.</p>
+                          <p className="text-[10px] text-slate-500 ml-1">
+                            {hasPaymentTerms
+                              ? 'Status auto-calculated from installment payments.'
+                              : 'Payment status for this invoice.'}
+                          </p>
                         </div>
 
                         {/* Payment Terms */}
@@ -1404,16 +1607,18 @@ export default function AdminDashboard() {
                                 <div className="space-y-2">
                                   {/* Header */}
                                   <div className="hidden sm:grid grid-cols-12 gap-2 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    <div className="col-span-4">Label</div>
-                                    <div className="col-span-3 text-center">%</div>
-                                    <div className="col-span-4">Due Date</div>
+                                    <div className="col-span-3">Label</div>
+                                    <div className="col-span-2 text-center">%</div>
+                                    <div className="col-span-3">Due Date</div>
+                                    <div className="col-span-3">Status</div>
                                     <div className="col-span-1" />
                                   </div>
                                   {paymentTerms.map((term, i) => {
                                     const amt = totals.total * (Number(term.percentage) || 0) / 100;
+                                    const partialMax = amt > 0 ? amt : undefined;
                                     return (
                                       <div key={i} className="grid grid-cols-12 gap-2 items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
-                                        <div className="col-span-12 sm:col-span-4">
+                                        <div className="col-span-12 sm:col-span-3">
                                           <input
                                             type="text"
                                             value={term.label}
@@ -1422,7 +1627,7 @@ export default function AdminDashboard() {
                                             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium"
                                           />
                                         </div>
-                                        <div className="col-span-5 sm:col-span-3">
+                                        <div className="col-span-4 sm:col-span-2">
                                           <div className="relative">
                                             <input
                                               type="number"
@@ -1441,7 +1646,7 @@ export default function AdminDashboard() {
                                             </p>
                                           )}
                                         </div>
-                                        <div className="col-span-5 sm:col-span-4">
+                                        <div className="col-span-4 sm:col-span-3">
                                           <input
                                             type="date"
                                             value={term.dueDate}
@@ -1449,7 +1654,37 @@ export default function AdminDashboard() {
                                             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium"
                                           />
                                         </div>
-                                        <div className="col-span-2 sm:col-span-1 flex justify-end">
+                                        <div className="col-span-4 sm:col-span-3 space-y-1">
+                                          <select
+                                            value={term.status || 'due'}
+                                            onChange={(e) => handleTermChange(i, 'status', e.target.value)}
+                                            className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-xs font-semibold text-slate-700"
+                                          >
+                                            {PAYMENT_TERM_STATUSES.map((opt) => (
+                                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                          </select>
+                                          {(term.status || 'due') === 'partially_paid' && (
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max={partialMax}
+                                              value={term.partialAmount ?? ''}
+                                              onChange={(e) => handleTermChange(i, 'partialAmount', e.target.value)}
+                                              placeholder="Paid amount"
+                                              className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-xs font-medium text-slate-800"
+                                            />
+                                          )}
+                                        </div>
+                                        <div className="col-span-12 sm:col-span-1 flex justify-end gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDownloadInstallmentPdf(term, i)}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                                            title="Download installment invoice"
+                                          >
+                                            <Download className="w-3.5 h-3.5" />
+                                          </button>
                                           <button
                                             type="button"
                                             onClick={() => removePaymentTerm(i)}
@@ -1630,7 +1865,7 @@ export default function AdminDashboard() {
                           ) : (
                             <>
                               <CheckCircle className="w-4 h-4" />
-                              Save Invoice
+                              {editingInvoiceId ? 'Update Invoice' : 'Save Invoice'}
                             </>
                           )}
                         </button>
@@ -1658,8 +1893,8 @@ export default function AdminDashboard() {
                             <p className="text-primary-200 text-sm mt-1">ID: #INV-{new Date().getTime().toString().slice(-6)}</p>
                           </div>
                           <div className="text-left sm:text-right shrink-0">
-                            <p className="text-xs font-bold uppercase tracking-widest text-primary-300 mb-1">Amount Due</p>
-                            <p className="text-2xl sm:text-3xl font-bold text-primary-300 tabular-nums">Rs. {totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-primary-300 mb-1">Balance Due</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-primary-300 tabular-nums">Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                           </div>
                         </div>
                       </div>
@@ -1688,7 +1923,15 @@ export default function AdminDashboard() {
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Status</p>
-                            <p className="font-semibold text-primary-950 capitalize">{invoiceStatus === 'paid' ? 'Paid' : invoiceStatus === 'overdue' ? 'Overdue' : 'Unpaid'}</p>
+                            <p className="font-semibold text-primary-950 capitalize">
+                              {invoiceStatus === 'paid'
+                                ? 'Paid'
+                                : invoiceStatus === 'partially_paid'
+                                  ? 'Partially Paid'
+                                  : invoiceStatus === 'overdue'
+                                    ? 'Overdue'
+                                    : 'Unpaid'}
+                            </p>
                           </div>
                         </div>
 
@@ -1698,9 +1941,21 @@ export default function AdminDashboard() {
                             <span className="text-primary-700/80">Subtotal</span>
                             <span className="font-semibold text-primary-950 tabular-nums">Rs. {totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
+                          <div className="flex items-center justify-between py-2.5 text-sm">
+                            <span className="text-primary-700/80">Previous Balance Due</span>
+                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {linkedClientPreviousDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-2.5 text-sm">
+                            <span className="text-primary-700/80">Paid via Installments</span>
+                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {paidAmountFromTerms.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-2.5 text-sm">
+                            <span className="text-primary-700/80">Current Invoice Outstanding</span>
+                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {currentInvoiceOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
                           <div className="flex items-center justify-between py-3 mt-1 border-t-2 border-primary-200 text-base">
-                            <span className="font-bold text-primary-950">Total</span>
-                            <span className="font-bold text-primary-600 tabular-nums">Rs. {totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="font-bold text-primary-950">Balance Due</span>
+                            <span className="font-bold text-primary-600 tabular-nums">Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
                         </div>
 
@@ -1764,6 +2019,11 @@ export default function AdminDashboard() {
                                 <div>
 <p className="font-bold text-primary-950 text-sm">{inv.clientName}</p>
                                 <p className="text-xs text-primary-600/70 font-mono mt-0.5">#{String(inv._id).slice(-6)}</p>
+                                {inv.linkedPartialInvoiceId && (
+                                  <p className="text-[10px] text-blue-700/80 font-semibold mt-0.5">
+                                    Linked to #{String(inv.linkedPartialInvoiceId).slice(-6)}
+                                  </p>
+                                )}
                                 </div>
                               </div>
                             </td>
@@ -1795,6 +2055,13 @@ export default function AdminDashboard() {
                             <td className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-right">
                               <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                 <button
+                                  onClick={() => openEditInvoice(inv)}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit Invoice"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
                                   onClick={() => handleDownloadInvoicePdf(inv)}
                                   disabled={downloadingInvId === inv._id}
                                   className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1813,6 +2080,7 @@ export default function AdminDashboard() {
                                     className="appearance-none bg-white border border-slate-200 text-slate-600 text-xs font-semibold rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:border-primary-500 cursor-pointer hover:bg-slate-50"
                                   >
                                     <option value="unpaid">Mark Unpaid</option>
+                                    <option value="partially_paid">Mark Partially Paid</option>
                                     <option value="paid">Mark Paid</option>
                                     <option value="overdue">Mark Overdue</option>
                                   </select>
@@ -2408,7 +2676,19 @@ function StatusPill({ status }) {
     styles = 'bg-amber-50 text-amber-700 border-amber-200';
     dotColor = 'bg-amber-500';
   }
-  const label = status === 'paid' ? 'Paid' : status === 'overdue' ? 'Overdue' : status === 'unpaid' ? 'Unpaid' : status;
+  if (status === 'partially_paid') {
+    styles = 'bg-blue-50 text-blue-700 border-blue-200';
+    dotColor = 'bg-blue-500';
+  }
+  const label = status === 'paid'
+    ? 'Paid'
+    : status === 'partially_paid'
+      ? 'Partially Paid'
+      : status === 'overdue'
+        ? 'Overdue'
+        : status === 'unpaid'
+          ? 'Unpaid'
+          : status;
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${styles}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />

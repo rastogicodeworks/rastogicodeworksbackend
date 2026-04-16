@@ -14,7 +14,7 @@ clientsRouter.use(requireAdmin);
 clientsRouter.get('/', async (req, res) => {
   try {
     const clientUsers = await User.find({ role: 'client' })
-      .select('email name createdAt')
+      .select('email name gstNumber billingAddress createdAt')
       .sort({ createdAt: -1 })
       .lean();
 

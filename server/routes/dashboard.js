@@ -30,7 +30,7 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
     // Auto-mark overdue
     const today = new Date().toISOString().slice(0, 10);
     await Invoice.updateMany(
-      { clientEmail: userEmail, status: 'unpaid', dueDate: { $lte: today, $exists: true, $ne: '' } },
+      { clientEmail: userEmail, status: { $in: ['unpaid', 'partially_paid'] }, dueDate: { $lte: today, $exists: true, $ne: '' } },
       { $set: { status: 'overdue' } },
     ).catch(() => {});
 
@@ -44,8 +44,16 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
       amount: inv.total ?? 0,
       amountFormatted: `Rs. ${(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
       subtotal: inv.subtotal ?? inv.total ?? 0,
+      previousBalanceDue: inv.previousBalanceDue ?? 0,
+      balanceDue: inv.balanceDue ?? inv.total ?? 0,
       dueDate: inv.dueDate || null,
-      status: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : 'Unpaid',
+      status: inv.status === 'paid'
+        ? 'Paid'
+        : inv.status === 'partially_paid'
+          ? 'Partially Paid'
+          : inv.status === 'overdue'
+            ? 'Overdue'
+            : 'Unpaid',
       invoiceDate: inv.invoiceDate,
       notes: inv.notes || '',
       billingAddress: inv.billingAddress || '',
@@ -57,7 +65,7 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
 
     // Real summary from invoices
     const paidInvoices = formattedInvoices.filter((i) => i.status === 'Paid');
-    const unpaidInvoices = formattedInvoices.filter((i) => i.status === 'Unpaid' || i.status === 'Overdue');
+    const unpaidInvoices = formattedInvoices.filter((i) => i.status === 'Unpaid' || i.status === 'Partially Paid' || i.status === 'Overdue');
     const overdueInvoices = formattedInvoices.filter((i) => i.status === 'Overdue');
     const totalPaid = paidInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
     const totalUnpaid = unpaidInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);

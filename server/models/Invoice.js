@@ -5,6 +5,12 @@ const PaymentTermSchema = new mongoose.Schema(
     label: { type: String, trim: true, default: '' },
     percentage: { type: Number, min: 0, max: 100, required: true },
     dueDate: { type: String, default: '' },
+    status: {
+      type: String,
+      enum: ['due', 'paid', 'partially_paid', 'overdue'],
+      default: 'due',
+    },
+    partialAmount: { type: Number, min: 0, default: 0 },
   },
   { _id: false },
 );
@@ -32,9 +38,12 @@ const InvoiceSchema = new mongoose.Schema(
     taxRate: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
+    previousBalanceDue: { type: Number, min: 0, default: 0 },
+    balanceDue: { type: Number, min: 0, default: 0 },
+    linkedPartialInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
     status: {
       type: String,
-      enum: ['unpaid', 'paid', 'overdue'],
+      enum: ['unpaid', 'paid', 'partially_paid', 'overdue'],
       default: 'unpaid',
     },
     paymentTerms: { type: [PaymentTermSchema], default: [] },
