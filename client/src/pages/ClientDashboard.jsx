@@ -19,12 +19,10 @@ import {
   Calendar,
   Target,
   ShieldCheck,
-  Megaphone,
   User,
   Lock,
   Flag,
   XCircle,
-  Pin,
   CheckSquare,
   Square,
   FolderKanban,
@@ -38,7 +36,7 @@ const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'invoices', label: 'Invoices', icon: Receipt },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
-  { id: 'announcements', label: 'Announcements', icon: Megaphone },
+  { id: 'quotations', label: 'Quotations', icon: FileText },
   { id: 'profile', label: 'Profile', icon: User },
 ];
 
@@ -69,7 +67,6 @@ export default function ClientDashboard() {
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [expandedInvoice, setExpandedInvoice] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
   const [disputingId, setDisputingId] = useState(null);
   const [disputeNote, setDisputeNote] = useState('');
   const [disputeInvoiceId, setDisputeInvoiceId] = useState(null);
@@ -101,13 +98,12 @@ export default function ClientDashboard() {
         }
         if (!res.ok) { setError(data.message || 'Failed to load dashboard.'); setLoading(false); return; }
         if (data.success && data.data) {
-          const { user: u, projects: p, deliverables: d, invoices: i, summary: s, announcements: ann } = data.data;
+          const { user: u, projects: p, deliverables: d, invoices: i, summary: s } = data.data;
           if (u) { setUser({ name: u.name || 'Guest', email: u.email || '' }); setProfileName(u.name || ''); }
           if (Array.isArray(p)) setProjects(p);
           if (Array.isArray(d)) setDeliverables(d);
           if (Array.isArray(i)) setInvoices(i);
           if (s) setSummary(s);
-          if (Array.isArray(ann)) setAnnouncements(ann);
         }
       } catch {
         if (!cancelled) setError('Network error. Please try again.');
@@ -192,6 +188,7 @@ export default function ClientDashboard() {
         dueDate: inv.dueDate || '',
         items: inv.items || [],
         notes: inv.notes || '',
+        status: inv.status,
         totals: {
           subtotal: inv.subtotal ?? inv.amount ?? 0,
           total: inv.amount ?? 0,
@@ -213,7 +210,7 @@ export default function ClientDashboard() {
     : 0;
 
   return (
-    <div className="admin-dashboard min-h-screen flex flex-col font-sans text-primary-900 antialiased bg-gradient-to-br from-primary-50/40 via-white to-primary-50/20">
+    <div className="admin-dashboard min-h-screen flex flex-col lg:flex-row lg:items-stretch font-sans text-primary-900 antialiased bg-gradient-to-br from-primary-50/40 via-white to-primary-50/20">
       <DashboardNavbar
         variant="client"
         navItems={navItems}
@@ -222,7 +219,7 @@ export default function ClientDashboard() {
         onLogout={handleLogout}
       />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden flex-col">
         <main className="flex-1 min-w-0 overflow-y-auto admin-scroll">
           <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 md:py-10">
 
@@ -233,14 +230,14 @@ export default function ClientDashboard() {
                   {activeSection === 'overview' && 'Dashboard'}
                   {activeSection === 'invoices' && 'Invoices & Payments'}
                   {activeSection === 'projects' && 'Projects'}
-                  {activeSection === 'announcements' && 'Announcements'}
+                  {activeSection === 'quotations' && 'Quotations'}
                   {activeSection === 'profile' && 'My Profile'}
                 </h1>
                 <p className="section-sub text-primary-700/90 max-w-2xl">
                   {activeSection === 'overview' && `Welcome back${user.name !== 'Guest' ? `, ${user.name}` : ''}. Here's your account summary.`}
                   {activeSection === 'invoices' && 'View your invoices, payment schedules, and download PDFs.'}
                   {activeSection === 'projects' && 'Track progress and status of your active projects.'}
-                  {activeSection === 'announcements' && 'Stay up to date with the latest news and updates from your team.'}
+                  {activeSection === 'quotations' && 'View quotation requests and discuss custom proposals with your account team.'}
                   {activeSection === 'profile' && 'Manage your name and update your password.'}
                 </p>
               </div>
@@ -702,34 +699,19 @@ export default function ClientDashboard() {
               </div>
             )}
 
-            {/* ─── ANNOUNCEMENTS ─── */}
-            {activeSection === 'announcements' && (
-              <div className="space-y-4 animate-fade-in-up">
-                {loading ? (
-                  <div className="admin-card-glass rounded-2xl flex items-center justify-center py-20"><div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>
-                ) : announcements.length === 0 ? (
-                  <div className="admin-card-glass rounded-2xl flex flex-col items-center justify-center py-20 px-4 text-center">
-                    <Megaphone className="w-14 h-14 text-primary-300 mb-5" />
-                    <h3 className="text-xl font-bold text-primary-950 mb-2">No announcements yet</h3>
-                    <p className="text-primary-700/80 max-w-sm">Team updates and announcements will appear here.</p>
-                  </div>
-                ) : (
-                  announcements.map((a) => (
-                    <div key={a._id} className={`admin-card-glass rounded-2xl p-5 sm:p-6 border ${a.pinned ? 'border-primary-300 bg-primary-50/30' : 'border-primary-100'}`}>
-                      <div className="flex items-start gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0"><Megaphone className="w-4 h-4" /></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                            {a.pinned && <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Pin className="w-2.5 h-2.5" />Pinned</span>}
-                            <h3 className="font-bold text-primary-950">{a.title}</h3>
-                          </div>
-                          <p className="text-xs text-primary-400">{new Date(a.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-primary-700/90 leading-relaxed whitespace-pre-wrap pl-12">{a.content}</p>
-                    </div>
-                  ))
-                )}
+            {/* ─── QUOTATIONS ─── */}
+            {activeSection === 'quotations' && (
+              <div className="admin-card-glass rounded-2xl p-6 sm:p-8 animate-fade-in-up">
+                <h3 className="text-lg font-bold text-primary-950 mb-2">Quotation Support</h3>
+                <p className="text-primary-700/85 leading-relaxed">
+                  Need a custom quotation for new services, add-ons, or milestones? Please contact your account team and
+                  we will share a detailed quotation PDF with pricing, scope, and validity timeline.
+                </p>
+                <div className="mt-5 text-sm text-primary-700/80 space-y-1">
+                  <p>Email: vasurastogi213@gmail.com</p>
+                  <p>Phone: +91 8859985607</p>
+                  <p>Website: www.rastogicodeworks.com</p>
+                </div>
               </div>
             )}
 

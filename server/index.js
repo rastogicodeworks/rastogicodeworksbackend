@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 import { connectDb } from './config/db.js';
 import { bootstrapAdmin } from './scripts/bootstrapAdmin.js';
 import { authRouter } from './routes/auth.js';
@@ -13,6 +12,11 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { clientsRouter } from './routes/clients.js';
 import { projectsRouter } from './routes/projects.js';
 import { announcementsRouter } from './routes/announcements.js';
+import { hiringRouter } from './routes/hiring.js';
+import { employeeTasksRouter } from './routes/employeeTasks.js';
+import { employeesRouter } from './routes/employees.js';
+import { careersRouter } from './routes/careers.js';
+import { appSettingsRouter } from './routes/appSettings.js';
 
 dotenv.config();
 
@@ -70,14 +74,6 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { success: false, message: 'Too many attempts. Try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 app.get('/api/health', (_, res) => {
   res.json({
     status: 'ok',
@@ -87,12 +83,17 @@ app.get('/api/health', (_, res) => {
   });
 });
 
-app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/careers', careersRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/settings/app', appSettingsRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/clients', clientsRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/hiring', hiringRouter);
+app.use('/api/employee-tasks', employeeTasksRouter);
+app.use('/api/employees', employeesRouter);
 
 app.use((err, req, res, next) => {
   console.error('[global-error]', err);

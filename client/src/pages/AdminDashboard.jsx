@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -25,6 +25,7 @@ import {
   KeyRound,
   Percent,
   ChevronUp,
+  ImagePlus,
   CreditCard,
   BarChart2,
   Target,
@@ -35,8 +36,6 @@ import {
   Eye,
   EyeOff,
   FolderKanban,
-  Megaphone,
-  Pin,
   Edit3,
   User,
   Lock,
@@ -45,11 +44,31 @@ import {
   Flag,
   XCircle,
   MessageSquare,
+  Mail,
+  Send,
+  Sparkles,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import { downloadInvoicePdf } from '../utils/invoicePdf.js';
+import { downloadQuotationPdf } from '../utils/quotationPdf.js';
+import {
+  getMonthlyDefaultRemarks,
+  getQuotationMonthlyRemarks,
+  buildInvoiceRemarkPreset,
+  buildQuotationRemarkPreset,
+  INVOICE_REMARK_CHIPS,
+  QUOTATION_REMARK_CHIPS,
+} from '../utils/documentRemarks.js';
 import DashboardNavbar from '../components/DashboardNavbar';
+import AdminDesktopTopBar from '../components/AdminDesktopTopBar';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
+import AdminHiringSection from '../components/AdminHiringSection';
+import AdminReportsSection from '../components/AdminReportsSection';
+import AdminRevenueChart from '../components/AdminRevenueChart';
 import API_BASE from '../config/api';
 import { getAuthHeaders, clearAuthToken } from '../config/auth';
+import { services } from '../data/services';
 
 const emptyItem = { description: '', quantity: 1, price: 0 };
 const emptyTerm = { label: '', percentage: '', dueDate: '', status: 'due', partialAmount: '' };
@@ -78,6 +97,34 @@ function calculateInvoiceTotals(items) {
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState('overview'); // overview | invoices | clients | settings
+  const [navSearch, setNavSearch] = useState('');
+  const { notifications, notifLoading, lastPolled } = useAdminNotifications(!!API_BASE);
+
+  const adminToolbar = useMemo(
+    () => ({
+      navSearch,
+      setNavSearch,
+      notifications,
+      notifLoading,
+      lastPolled,
+    }),
+    [navSearch, setNavSearch, notifications, notifLoading, lastPolled],
+  );
+
+  const navItems = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'create', label: 'Create Invoice', icon: FilePlus },
+      { id: 'invoices', label: 'Invoices', icon: FileText },
+      { id: 'projects', label: 'Projects', icon: FolderKanban },
+      { id: 'quotations', label: 'Quotation Generator', icon: FileText },
+      { id: 'clients', label: 'Clients', icon: Users },
+      { id: 'reports', label: 'Reports', icon: BarChart2 },
+      { id: 'hiring', label: 'Hiring', icon: UserPlus },
+      { id: 'settings', label: 'Settings', icon: Settings },
+    ],
+    [],
+  );
 
   // Invoice creation form state
   const [clientName, setClientName] = useState('');
@@ -118,20 +165,188 @@ export default function AdminDashboard() {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectError, setProjectError] = useState('');
 
-  // Announcements state
-  const [announcements, setAnnouncements] = useState([]);
-  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
-  const [annForm, setAnnForm] = useState({ title: '', content: '', pinned: false, audience: 'all' });
-  const [annSaving, setAnnSaving] = useState(false);
-  const [annError, setAnnError] = useState('');
+  // Quotation generator state
+  const [quotationForm, setQuotationForm] = useState({
+    clientName: '',
+    companyName: 'Rastogi Codeworks',
+    companyLogoDataUrl: '',
+    clientLogoDataUrl: '',
+    serviceId: '',
+    projectTitle: '',
+    billingAddress: '',
+    quoteDate: new Date().toISOString().slice(0, 10),
+    validUntil: '',
+    deliveryDays: '',
+    requirements: '',
+    notes: '',
+    items: [{ ...emptyItem }],
+  });
 
   // Change password (in Settings section)
   const [changePwForm, setChangePwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [changePwLoading, setChangePwLoading] = useState(false);
   const [changePwError, setChangePwError] = useState('');
   const [changePwSuccess, setChangePwSuccess] = useState('');
+  const [draggingLogoField, setDraggingLogoField] = useState('');
+
+  // Workspace / email settings (Settings section)
+  const [appSettings, setAppSettings] = useState(null);
+  const [mailTransportConfigured, setMailTransportConfigured] = useState(false);
+  const [appSettingsLoading, setAppSettingsLoading] = useState(false);
+  const [appSettingsSaving, setAppSettingsSaving] = useState(false);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [appSettingsMsg, setAppSettingsMsg] = useState({ type: '', text: '' });
 
   const totals = useMemo(() => calculateInvoiceTotals(items), [items]);
+  const quotationTotals = useMemo(() => calculateInvoiceTotals(quotationForm.items || []), [quotationForm.items]);
+
+  useEffect(() => {
+    if (editingInvoiceId) return;
+    setNotes((prev) => (prev.trim() === '' ? getMonthlyDefaultRemarks(invoiceDate) : prev));
+  }, [invoiceDate, editingInvoiceId]);
+
+  useEffect(() => {
+    setQuotationForm((prev) => {
+      if ((prev.notes || '').trim() !== '') return prev;
+      return { ...prev, notes: getQuotationMonthlyRemarks(prev.quoteDate) };
+    });
+  }, [quotationForm.quoteDate]);
+
+  const applyInvoiceRemarkPreset = (presetId) => {
+    const text = buildInvoiceRemarkPreset(presetId, { invoiceDate, dueDate, clientName });
+    if (text) setNotes(text);
+  };
+
+  const applyQuotationRemarkPreset = (presetId) => {
+    setQuotationForm((p) => {
+      const text = buildQuotationRemarkPreset(presetId, { quoteDate: p.quoteDate, clientName: p.clientName });
+      return text ? { ...p, notes: text } : p;
+    });
+  };
+
+  const quotationServices = useMemo(
+    () => (services || []).map((s) => ({ id: s.id, title: s.title, fullDesc: s.fullDesc || '' })),
+    [],
+  );
+  const getServiceDefaultContent = (serviceId) => {
+    const selected = (services || []).find((s) => s.id === serviceId);
+    if (!selected) return null;
+    const requirementsList = Array.isArray(selected.pricing?.included) && selected.pricing.included.length > 0
+      ? selected.pricing.included.map((line) => `- ${line}`).join('\n')
+      : Array.isArray(selected.features) && selected.features.length > 0
+        ? selected.features.map((line) => `- ${line}`).join('\n')
+        : '';
+    const assumptions = Array.isArray(selected.pricing?.extras) && selected.pricing.extras.length > 0
+      ? selected.pricing.extras.map((line) => `- ${line}`).join('\n')
+      : '';
+    const requirements = [selected.fullDesc || '', requirementsList].filter(Boolean).join('\n\n');
+    const notes = [
+      selected.pricing?.summary || '',
+      selected.pricing?.model ? `Engagement Model: ${selected.pricing.model}` : '',
+      selected.pricing?.note ? `Commercial Note: ${selected.pricing.note}` : '',
+      assumptions ? `Assumptions:\n${assumptions}` : '',
+    ].filter(Boolean).join('\n\n');
+    return {
+      projectTitle: selected.title || '',
+      requirements,
+      notes,
+    };
+  };
+
+  const handleQuotationItemChange = (index, field, value) => {
+    setQuotationForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) => (
+        i === index
+          ? {
+            ...item,
+            [field]:
+              field === 'quantity' || field === 'price'
+                ? value === ''
+                  ? ''
+                  : Number(value)
+                : value,
+          }
+          : item
+      )),
+    }));
+  };
+
+  const addQuotationItem = () => {
+    setQuotationForm((prev) => ({ ...prev, items: [...prev.items, { ...emptyItem }] }));
+  };
+
+  const removeQuotationItem = (index) => {
+    setQuotationForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
+  };
+
+  const handleDownloadQuotation = async (e) => {
+    e?.preventDefault?.();
+    const payloadItems = (quotationForm.items || []).filter((i) => i.description || i.quantity || i.price);
+    if (!quotationForm.clientName.trim()) {
+      setError('Quotation client name is required.');
+      return;
+    }
+    if (payloadItems.length === 0) {
+      setError('Add at least one quotation item.');
+      return;
+    }
+    try {
+      await downloadQuotationPdf({
+        clientName: quotationForm.clientName.trim(),
+        companyName: quotationForm.companyName.trim(),
+        companyLogoDataUrl: quotationForm.companyLogoDataUrl || '',
+        clientLogoDataUrl: quotationForm.clientLogoDataUrl || '',
+        projectTitle: quotationForm.projectTitle.trim(),
+        billingAddress: quotationForm.billingAddress.trim() || undefined,
+        quoteDate: quotationForm.quoteDate,
+        validUntil: quotationForm.validUntil,
+        deliveryDays: quotationForm.deliveryDays,
+        requirements: quotationForm.requirements,
+        items: payloadItems,
+        notes: quotationForm.notes,
+        totals: quotationTotals,
+      });
+    } catch (err) {
+      setError(err?.message || 'Failed to generate quotation PDF.');
+    }
+  };
+
+  const handleQuotationLogoFile = (field, file) => {
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      setError('Please upload an image file only.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setQuotationForm((prev) => ({ ...prev, [field]: String(reader.result || '') }));
+    };
+    reader.readAsDataURL(file);
+  };
+  const handleQuotationLogoUpload = (field) => (e) => {
+    const file = e.target.files?.[0];
+    handleQuotationLogoFile(field, file);
+  };
+  const handleQuotationLogoDragOver = (field) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDraggingLogoField(field);
+  };
+  const handleQuotationLogoDrop = (field) => (e) => {
+    e.preventDefault();
+    setDraggingLogoField('');
+    const file = e.dataTransfer.files?.[0];
+    handleQuotationLogoFile(field, file);
+  };
+  const handleQuotationLogoDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDraggingLogoField('');
+    }
+  };
+  const clearQuotationLogo = (field) => {
+    setQuotationForm((prev) => ({ ...prev, [field]: '' }));
+  };
 
   const handleItemChange = (index, field, value) => {
     setItems((prev) =>
@@ -163,6 +378,8 @@ export default function AdminDashboard() {
   const [linkedPartialInvoiceId, setLinkedPartialInvoiceId] = useState('');
   const [paymentTerms, setPaymentTerms] = useState([]);
   const [showPaymentTerms, setShowPaymentTerms] = useState(false);
+  /** Stable draft invoice suffix for live preview (new invoice); regenerated on Clear. */
+  const draftInvoiceNoRef = useRef(Date.now().toString().slice(-6));
 
   const addPaymentTerm = () => setPaymentTerms((prev) => [...prev, { ...emptyTerm }]);
   const removePaymentTerm = (i) => setPaymentTerms((prev) => prev.filter((_, idx) => idx !== i));
@@ -243,15 +460,26 @@ export default function AdminDashboard() {
     ? Math.max(0, linkedClientPreviousDue - settledOnCurrentInvoice)
     : linkedClientPreviousDue + currentInvoiceOutstanding;
 
+  const previewInvoiceRefLabel = editingInvoiceId
+    ? `INV-${String(editingInvoiceId).slice(-6).toUpperCase()}`
+    : `INV-${draftInvoiceNoRef.current}`;
+
+  const previewHasLineItems = items.some(
+    (it) => (it.description || '').trim() || Number(it.quantity) || Number(it.price),
+  );
+  const previewPaidInFull = invoiceStatus === 'paid' && totalBalanceDue <= 0;
+
   const resetForm = () => {
+    draftInvoiceNoRef.current = Date.now().toString().slice(-6);
+    const todayIso = new Date().toISOString().slice(0, 10);
     setClientName('');
     setClientGst('');
     setBillingAddress('');
-    setInvoiceDate(new Date().toISOString().slice(0, 10));
+    setInvoiceDate(todayIso);
     setDueDate('');
     setInvoiceStatus('unpaid');
     setItems([{ ...emptyItem }]);
-    setNotes('');
+    setNotes(getMonthlyDefaultRemarks(todayIso));
     setInvoiceClientEmail('');
     setLinkedPartialInvoiceId('');
     setPaymentTerms([]);
@@ -487,16 +715,19 @@ export default function AdminDashboard() {
       topClients,
       monthlyData,
       maxMonthlyRevenue,
-      // Invoice aging: 0-30, 31-60, 61-90, 90+ days overdue
+      // Invoice aging: open invoices only when due date is today or past — days past due
       agingBuckets: (() => {
         const today = new Date();
-        const buckets = { '0–30d': 0, '31–60d': 0, '61–90d': 0, '90d+': 0 };
-        const amts = { '0–30d': 0, '31–60d': 0, '61–90d': 0, '90d+': 0 };
+        const buckets = { '0-30d': 0, '31-60d': 0, '61-90d': 0, '90d+': 0 };
+        const amts = { '0-30d': 0, '31-60d': 0, '61-90d': 0, '90d+': 0 };
         invoices.filter((inv) => inv.status !== 'paid' && inv.dueDate).forEach((inv) => {
-          const days = Math.floor((today - new Date(inv.dueDate)) / 86400000);
-          const key = days <= 30 ? '0–30d' : days <= 60 ? '31–60d' : days <= 90 ? '61–90d' : '90d+';
+          const daysPast = Math.floor((today - new Date(inv.dueDate)) / 86400000);
+          if (daysPast < 0) return;
+          const out = Number(inv.balanceDue ?? inv.total) || 0;
+          if (out <= 0) return;
+          const key = daysPast <= 30 ? '0-30d' : daysPast <= 60 ? '31-60d' : daysPast <= 90 ? '61-90d' : '90d+';
           buckets[key]++;
-          amts[key] += inv.total || 0;
+          amts[key] += out;
         });
         return Object.entries(buckets).map(([range, count]) => ({ range, count, amount: amts[range] }));
       })(),
@@ -521,6 +752,7 @@ export default function AdminDashboard() {
         dueDate,
         items,
         notes,
+        status: invoiceStatus,
         totals: { ...totals, previousBalanceDue: linkedClientPreviousDue, balanceDue: totalBalanceDue },
         paymentTerms: paymentTerms.filter((t) => Number(t.percentage) > 0),
         invoiceId: `INV-${Date.now().toString().slice(-6)}`,
@@ -572,6 +804,7 @@ export default function AdminDashboard() {
           status,
           partialAmount: settled,
         }],
+        status: status === 'paid' ? 'paid' : status === 'partially_paid' ? 'partially_paid' : 'unpaid',
         invoiceId: `INST-${Date.now().toString().slice(-6)}`,
       });
     } catch (err) {
@@ -590,6 +823,7 @@ export default function AdminDashboard() {
         dueDate: inv.dueDate || '',
         items: inv.items || [],
         notes: inv.notes || '',
+        status: inv.status,
         totals: {
           subtotal: inv.subtotal ?? inv.total ?? 0,
           total: inv.total ?? 0,
@@ -637,9 +871,9 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch clients when opening Clients section, Create Invoice, Projects, or Announcements (for dropdowns)
+  // Fetch clients when opening Clients section, Create Invoice, Projects, or Quotations (for dropdowns)
   useEffect(() => {
-    if (activeSection !== 'clients' && activeSection !== 'create' && activeSection !== 'projects' && activeSection !== 'announcements') return;
+    if (activeSection !== 'clients' && activeSection !== 'create' && activeSection !== 'projects' && activeSection !== 'quotations') return;
     setClientsLoading(true);
     fetch(`${API_BASE}/api/clients`, { headers: getAuthHeaders(), credentials: 'include' })
       .then(async (res) => {
@@ -763,38 +997,6 @@ export default function AdminDashboard() {
     setProjectForm((prev) => ({ ...prev, milestones: prev.milestones.map((m, idx) => idx === i ? { ...m, completed: !m.completed } : m) }));
   };
 
-  // ── Announcements ──
-  useEffect(() => {
-    if (activeSection !== 'announcements') return;
-    setAnnouncementsLoading(true);
-    fetch(`${API_BASE}/api/announcements`, { headers: getAuthHeaders(), credentials: 'include' })
-      .then((r) => r.json().catch(() => ({})))
-      .then((d) => setAnnouncements(d.announcements || []))
-      .catch(() => setAnnouncements([]))
-      .finally(() => setAnnouncementsLoading(false));
-  }, [activeSection]);
-
-  const handleCreateAnnouncement = async (e) => {
-    e.preventDefault();
-    if (!annForm.title.trim() || !annForm.content.trim()) { setAnnError('Title and content are required.'); return; }
-    setAnnSaving(true);
-    setAnnError('');
-    try {
-      const res = await fetch(`${API_BASE}/api/announcements`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, credentials: 'include', body: JSON.stringify(annForm) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || 'Failed to post');
-      setAnnouncements((prev) => [data.announcement, ...prev]);
-      setAnnForm({ title: '', content: '', pinned: false, audience: 'all' });
-    } catch (err) { setAnnError(err.message); }
-    finally { setAnnSaving(false); }
-  };
-
-  const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm('Delete this announcement?')) return;
-    await fetch(`${API_BASE}/api/announcements/${id}`, { method: 'DELETE', headers: getAuthHeaders(), credentials: 'include' });
-    setAnnouncements((prev) => prev.filter((a) => a._id !== id));
-  };
-
   // ── Change password ──
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -812,6 +1014,82 @@ export default function AdminDashboard() {
       setTimeout(() => setChangePwSuccess(''), 3000);
     } catch (err) { setChangePwError(err.message); }
     finally { setChangePwLoading(false); }
+  };
+
+  useEffect(() => {
+    if (activeSection !== 'settings' || !API_BASE) return;
+    let cancelled = false;
+    setAppSettingsLoading(true);
+    setAppSettingsMsg({ type: '', text: '' });
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/settings/app`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.message || 'Failed to load settings');
+        setAppSettings(data.settings);
+        setMailTransportConfigured(!!data.mailTransportConfigured);
+      } catch (err) {
+        if (!cancelled) setAppSettingsMsg({ type: 'error', text: err.message || 'Failed to load email settings.' });
+      } finally {
+        if (!cancelled) setAppSettingsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection]);
+
+  const updateAppSetting = (key, value) => {
+    setAppSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const handleSaveAppSettings = async (e) => {
+    e.preventDefault();
+    if (!API_BASE || !appSettings) return;
+    setAppSettingsSaving(true);
+    setAppSettingsMsg({ type: '', text: '' });
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/app`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify(appSettings),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to save');
+      setAppSettings(data.settings);
+      setMailTransportConfigured(!!data.mailTransportConfigured);
+      setAppSettingsMsg({ type: 'success', text: 'Email settings saved.' });
+    } catch (err) {
+      setAppSettingsMsg({ type: 'error', text: err.message || 'Save failed.' });
+    } finally {
+      setAppSettingsSaving(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!API_BASE) return;
+    setTestEmailLoading(true);
+    setAppSettingsMsg({ type: '', text: '' });
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/app/test-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Test send failed');
+      setAppSettingsMsg({ type: 'success', text: data.message || 'Test email sent.' });
+    } catch (err) {
+      setAppSettingsMsg({ type: 'error', text: err.message || 'Test send failed.' });
+    } finally {
+      setTestEmailLoading(false);
+    }
   };
 
   const handleDeleteClient = async (client) => {
@@ -837,18 +1115,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'create', label: 'Create Invoice', icon: FilePlus },
-    { id: 'invoices', label: 'Invoices', icon: FileText },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'announcements', label: 'Announcements', icon: Megaphone },
-    { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ];
-
   return (
-    <div className="admin-dashboard min-h-screen flex flex-col font-sans text-primary-900 antialiased bg-gradient-to-br from-primary-50/40 via-white to-primary-50/20">
+    <div className="admin-dashboard min-h-screen flex flex-col lg:flex-row lg:items-stretch font-sans text-primary-900 antialiased bg-gradient-to-br from-primary-50/40 via-white to-primary-50/20">
       <DashboardNavbar
         variant="admin"
         navItems={navItems}
@@ -856,22 +1124,33 @@ export default function AdminDashboard() {
         setActiveSection={setActiveSection}
         onLogout={handleLogout}
         onNewInvoice={() => setActiveSection('create')}
+        adminToolbar={adminToolbar}
       />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden flex-col">
+        <AdminDesktopTopBar
+          navSearch={navSearch}
+          setNavSearch={setNavSearch}
+          notifications={notifications}
+          notifLoading={notifLoading}
+          lastPolled={lastPolled}
+          setActiveSection={setActiveSection}
+        />
         <main className="flex-1 min-w-0 overflow-y-auto admin-scroll">
           <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 md:py-10">
             
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
-              <div className="min-w-0">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
+              <div className="min-w-0 flex-1">
                 <h1 className="section-heading text-primary-950 mb-2 text-2xl sm:text-3xl md:text-4xl">
                   {activeSection === 'overview' && 'Dashboard'}
                   {activeSection === 'create' && 'New Invoice'}
                   {activeSection === 'invoices' && 'Invoices & Payments'}
                   {activeSection === 'projects' && 'Projects'}
-                  {activeSection === 'announcements' && 'Announcements'}
+                  {activeSection === 'quotations' && 'Quotation Generator'}
                   {activeSection === 'clients' && 'Clients'}
+                  {activeSection === 'reports' && 'Reports'}
+                  {activeSection === 'hiring' && 'Hiring & team'}
                   {activeSection === 'settings' && 'Settings'}
                 </h1>
                 <p className="section-sub text-primary-700/90 max-w-2xl">
@@ -879,20 +1158,48 @@ export default function AdminDashboard() {
                   {activeSection === 'create' && 'Create and send professional invoices to your clients in seconds.'}
                   {activeSection === 'invoices' && 'Manage your billing history, track payments, and handle overdue accounts.'}
                   {activeSection === 'projects' && 'Create and manage projects assigned to your clients.'}
-                  {activeSection === 'announcements' && 'Post updates and notices visible to your clients in their portal.'}
+                  {activeSection === 'quotations' && 'Create and download client quotations with line items and terms.'}
                   {activeSection === 'clients' && 'Manage your client relationships and project details.'}
+                  {activeSection === 'reports' && 'Export a consolidated business snapshot: revenue, invoices, hiring, and tasks.'}
+                  {activeSection === 'hiring' && 'Post roles, track candidates, invite employees, and assign internal tasks.'}
                   {activeSection === 'settings' && 'Configure your workspace preferences and billing details.'}
                 </p>
               </div>
 
+              {activeSection === 'overview' && (
+                <div className="w-full sm:w-auto shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:min-w-[16rem]">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600 mb-3 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-primary-500" />
+                    Quick links
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'invoices', label: 'Invoices', icon: FileText },
+                      { id: 'reports', label: 'Reports', icon: BarChart2 },
+                    ].map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setActiveSection(id)}
+                        title={label}
+                        className="group flex min-h-[3.75rem] w-full min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5 text-center shadow-sm transition-colors hover:border-primary-400 hover:bg-primary-50 hover:shadow-md"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-primary-600 transition-transform group-hover:scale-110" aria-hidden />
+                        <span className="text-xs font-semibold leading-snug text-primary-900">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {activeSection === 'projects' && (
-                <button type="button" onClick={openNewProject} className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20 shrink-0">
+                <button type="button" onClick={openNewProject} className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20 shrink-0 lg:self-center">
                   <Plus className="w-4 h-4" /> New Project
                 </button>
               )}
 
               {activeSection === 'invoices' && (
-                 <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-full bg-white/80 border border-primary-200/60 shadow-sm w-full sm:w-auto">
+                 <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-full bg-white/80 border border-primary-200/60 shadow-sm w-full sm:w-auto lg:self-center">
                     {['all', 'unpaid', 'paid', 'overdue'].map((filter) => (
                       <button
                         key={filter}
@@ -1229,49 +1536,38 @@ export default function AdminDashboard() {
                 {/* ── Row 4: Monthly Revenue Chart | Top Clients | Quick Actions ── */}
                 <div className="grid lg:grid-cols-3 gap-6">
 
-                  {/* Monthly Revenue Bar Chart */}
+                  {/* Revenue trend (6-month area chart) */}
                   <div className="lg:col-span-2 admin-card-glass rounded-2xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-primary-100 flex items-center gap-2">
-                      <BarChart2 className="w-5 h-5 text-primary-500" />
-                      <h2 className="text-base font-bold text-primary-950">Revenue — Last 6 Months</h2>
-                    </div>
-                    <div className="px-5 py-5">
-                      {loading ? (
-                        <div className="flex items-end gap-3 h-32">
-                          {[60, 80, 45, 90, 70, 55].map((h, i) => (
-                            <div key={i} className="flex-1 bg-primary-100 rounded-t-lg animate-pulse" style={{ height: `${h}%` }} />
-                          ))}
+                    <div className="px-5 py-4 border-b border-primary-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <BarChart2 className="w-5 h-5 text-primary-500" />
+                        <div>
+                          <h2 className="text-base font-bold text-primary-950">Revenue trend</h2>
+                          <p className="text-xs text-primary-600 mt-0.5">Billed amount by invoice date · last 6 months</p>
                         </div>
-                      ) : overviewStats.maxMonthlyRevenue === 1 ? (
-                        <div className="flex items-center justify-center h-32 text-primary-400 text-sm">No invoice data yet</div>
-                      ) : (
-                        <div className="flex items-end gap-2 sm:gap-3 h-36">
-                          {overviewStats.monthlyData.map((m, i) => {
-                            const heightPct = overviewStats.maxMonthlyRevenue > 0 ? (m.revenue / overviewStats.maxMonthlyRevenue) * 100 : 0;
-                            const isCurrentMonth = i === overviewStats.monthlyData.length - 1;
-                            return (
-                              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 group">
-                                <div className="w-full flex flex-col justify-end" style={{ height: '120px' }}>
-                                  <div
-                                    className={`w-full rounded-t-lg transition-all duration-700 ${isCurrentMonth ? 'bg-primary-600' : 'bg-primary-200 group-hover:bg-primary-300'}`}
-                                    style={{ height: `${Math.max(heightPct, m.revenue > 0 ? 4 : 0)}%` }}
-                                    title={`Rs. ${m.revenue.toLocaleString('en-IN')}`}
-                                  />
-                                </div>
-                                <span className={`text-[10px] font-semibold whitespace-nowrap ${isCurrentMonth ? 'text-primary-700' : 'text-primary-400'}`}>{m.label}</span>
-                                {m.revenue > 0 && (
-                                  <span className="text-[9px] text-primary-500 tabular-nums hidden sm:block">
-                                    {m.revenue >= 100000
-                                      ? `${(m.revenue / 100000).toFixed(1)}L`
-                                      : m.revenue >= 1000
-                                        ? `${(m.revenue / 1000).toFixed(1)}K`
-                                        : m.revenue.toString()}
-                                  </span>
-                                )}
-                              </div>
-                            );
+                      </div>
+                      {!loading && overviewStats.maxMonthlyRevenue > 1 && (
+                        <p className="text-xs font-semibold text-primary-700 tabular-nums">
+                          Peak month: Rs.{' '}
+                          {Math.max(...overviewStats.monthlyData.map((m) => m.revenue)).toLocaleString('en-IN', {
+                            maximumFractionDigits: 0,
                           })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="px-3 sm:px-5 py-4 sm:py-5">
+                      {loading ? (
+                        <AdminRevenueChart data={[]} loading={true} />
+                      ) : overviewStats.maxMonthlyRevenue === 1 ? (
+                        <div className="flex items-center justify-center h-40 text-primary-400 text-sm rounded-xl border border-dashed border-primary-200 bg-primary-50/30">
+                          No invoice data yet — chart will appear once you record revenue.
                         </div>
+                      ) : (
+                        <AdminRevenueChart
+                          data={overviewStats.monthlyData}
+                          loading={false}
+                          maxRevenue={overviewStats.maxMonthlyRevenue}
+                        />
                       )}
                     </div>
                   </div>
@@ -1338,36 +1634,84 @@ export default function AdminDashboard() {
 
                 {/* ── Row 5: Invoice Aging + Quick Actions ── */}
                 <div className="grid lg:grid-cols-3 gap-6">
-                  {/* Invoice Aging Report */}
-                  <div className="lg:col-span-2 admin-card-glass rounded-2xl p-5 sm:p-6">
-                    <h2 className="text-base font-bold text-primary-950 flex items-center gap-2 mb-4">
-                      <Clock className="w-5 h-5 text-primary-500" />
-                      Invoice Aging (Unpaid / Overdue)
+                  {/* Invoice Aging: open balance past due date, by days overdue */}
+                  <div className="lg:col-span-2 rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
+                          <Clock className="w-5 h-5 text-primary-600" />
+                        </div>
+                        <div>
+                          <h2 className="text-base font-bold text-primary-950 leading-tight">
+                            Invoice Aging (Unpaid / Overdue)
+                          </h2>
+                          <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
+                            Each row is <span className="font-semibold text-slate-600">days past the due date</span> for open invoices
+                            (unpaid or partial). Bars show share of total aging <span className="whitespace-nowrap">Rs. outstanding</span> in
+                            that bucket. Invoices not yet due are not included.
+                          </p>
+                        </div>
+                      </div>
                       {overviewStats.disputedCount > 0 && (
-                        <span className="ml-auto text-xs font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                          <Flag className="w-3 h-3" />{overviewStats.disputedCount} Dispute{overviewStats.disputedCount > 1 ? 's' : ''}
+                        <span className="shrink-0 self-start text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                          <Flag className="w-3 h-3 shrink-0" />
+                          {overviewStats.disputedCount} Dispute{overviewStats.disputedCount > 1 ? 's' : ''}
                         </span>
                       )}
-                    </h2>
-                    <div className="space-y-3">
-                      {overviewStats.agingBuckets.map(({ range, count, amount }) => {
-                        const maxCount = Math.max(...overviewStats.agingBuckets.map((b) => b.count), 1);
-                        const tone = range === '0–30d' ? 'bg-amber-400' : range === '31–60d' ? 'bg-orange-500' : 'bg-red-500';
-                        return (
-                          <div key={range} className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-slate-500 w-16 shrink-0">{range}</span>
-                            <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
-                              <div className={`h-full ${tone} rounded-lg transition-all duration-700`} style={{ width: `${count > 0 ? Math.max((count / maxCount) * 100, 6) : 0}%` }} />
-                            </div>
-                            <span className="text-xs font-bold text-slate-700 w-6 text-right">{count}</span>
-                            <span className="text-xs text-slate-500 w-28 text-right tabular-nums">Rs. {amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                          </div>
-                        );
-                      })}
-                      {overviewStats.agingBuckets.every((b) => b.count === 0) && (
-                        <p className="text-sm text-emerald-600 font-semibold flex items-center gap-2"><CheckCircle className="w-4 h-4" />No aging receivables — great job!</p>
-                      )}
                     </div>
+                    <div className="space-y-3.5 mt-5">
+                      {(() => {
+                        const maxAmt = Math.max(...overviewStats.agingBuckets.map((b) => b.amount), 1);
+                        return overviewStats.agingBuckets.map(({ range, count, amount }) => {
+                          const tone =
+                            range === '0-30d'
+                              ? 'bg-amber-400'
+                              : range === '31-60d'
+                                ? 'bg-orange-500'
+                                : range === '61-90d'
+                                  ? 'bg-red-500'
+                                  : 'bg-red-700';
+                          const pct = amount > 0 ? Math.max((amount / maxAmt) * 100, 5) : 0;
+                          return (
+                            <div key={range} className="flex items-center gap-3 sm:gap-4">
+                              <span className="text-xs font-bold text-slate-600 w-[3.25rem] sm:w-14 shrink-0 tabular-nums">
+                                {range}
+                              </span>
+                              <div
+                                className="flex-1 min-w-0 h-7 bg-slate-100 rounded-full overflow-hidden border border-slate-200/80"
+                                title={count > 0 ? `${count} invoice(s) · Rs. ${amount.toLocaleString('en-IN')}` : 'No receivables in this bucket'}
+                              >
+                                <div
+                                  className={`h-full ${tone} rounded-full transition-all duration-700 ease-out`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-bold text-slate-800 w-7 sm:w-8 text-right tabular-nums shrink-0">
+                                {count}
+                              </span>
+                              <span className="text-xs font-semibold text-slate-600 w-[5.5rem] sm:w-32 text-right tabular-nums shrink-0">
+                                Rs. {amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                    {overviewStats.agingBuckets.every((b) => b.count === 0) ? (
+                      <div className="mt-5 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3">
+                        <p className="text-sm text-emerald-800 font-semibold flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                          No aging receivables — great job!
+                        </p>
+                        <p className="text-xs text-emerald-700/90 mt-1.5 pl-6">
+                          Nothing is past due with an open balance. Upcoming due dates won’t appear here until the due day.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-[11px] text-slate-400">
+                        Follow up on older buckets first; amounts use each invoice’s outstanding balance when set.
+                      </p>
+                    )}
                   </div>
 
                   {/* Quick Actions */}
@@ -1812,11 +2156,43 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Notes */}
+                      {/* Notes & remark presets (month auto-fills when empty on new invoice) */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Notes & Terms</label>
+                        <div className="ml-1 space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Notes &amp; terms</label>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            For new invoices, remarks <span className="font-semibold text-slate-600">auto-match the invoice month</span> when this
+                            box is empty. Change the invoice date to refresh, or pick a preset below.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {INVOICE_REMARK_CHIPS.map(({ id, label }) => (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => applyInvoiceRemarkPreset(id)}
+                              className="px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-900 transition-colors"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setNotes(getMonthlyDefaultRemarks(invoiceDate))}
+                            className="px-3 py-1.5 rounded-full border border-primary-200 bg-primary-50 text-xs font-semibold text-primary-800 hover:bg-primary-100 transition-colors"
+                          >
+                            Refresh monthly
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotes('')}
+                            className="px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
                         <textarea
-                          rows={3}
+                          rows={4}
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="e.g. Thank you for your business. Payment is due within 7 days."
@@ -1874,101 +2250,238 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
-                {/* Preview Side - below form on mobile, sticky on desktop */}
+                {/* Preview Side — live invoice layout (updates as you type) */}
                 <div className="w-full lg:col-span-5 min-w-0 order-2">
-                  <div className="lg:sticky lg:top-24">
-                    <div className="admin-card-glass rounded-2xl overflow-hidden border border-primary-200/60">
-                      <div className="bg-primary-900 p-5 sm:p-6 lg:p-8 text-white relative overflow-hidden border-b border-primary-800/50">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-                        <div className="relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold uppercase tracking-widest text-primary-300 mb-2">Invoice For</p>
-                            <h3 className="text-xl sm:text-2xl font-bold text-white truncate">{clientName || 'Client Name'}</h3>
+                  <div className="lg:sticky lg:top-24 space-y-2">
+                    <p className="text-[11px] font-semibold text-primary-600 px-1 lg:text-right">
+                      Live preview · matches PDF layout
+                    </p>
+                    <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-md">
+                      <div className="bg-primary-900 px-5 py-5 sm:px-6 sm:py-6 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 h-48 w-48 rounded-full bg-primary-500/25 blur-3xl translate-x-1/3 -translate-y-1/2 pointer-events-none" />
+                        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex items-start gap-3">
+                            <img src="/transparent_logo.png" alt="" className="h-11 w-11 shrink-0 object-contain opacity-95" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-300/90">Rastogi Codeworks</p>
+                              <p className="text-xs text-primary-200/90 mt-0.5">Tax invoice · preview</p>
+                              <p className="mt-2 font-mono text-[11px] text-primary-200/90">{previewInvoiceRefLabel}</p>
+                            </div>
+                          </div>
+                          <div className="sm:text-right">
+                            <p
+                              className={`font-bold tracking-tight text-white mb-2 ${invoiceStatus === 'paid' ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'}`}
+                            >
+                              {invoiceStatus === 'paid' ? 'PAID INVOICE' : 'INVOICE'}
+                            </p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-primary-300 mb-1">Bill to</p>
+                            <h3 className="text-lg font-bold leading-snug text-white sm:text-xl break-words">
+                              {clientName.trim() || 'Client name'}
+                            </h3>
                             {clientGst.trim() && (
-                              <p className="text-primary-200 text-sm mt-1">GST: {clientGst.trim()}</p>
+                              <p className="mt-1 text-sm text-primary-200">GST: {clientGst.trim()}</p>
                             )}
                             {billingAddress.trim() && (
-                              <p className="text-primary-200 text-sm mt-1 whitespace-pre-line">{billingAddress.trim()}</p>
+                              <p className="mt-2 max-w-sm text-sm text-primary-200/90 whitespace-pre-line sm:ml-auto">
+                                {billingAddress.trim()}
+                              </p>
                             )}
-                            <p className="text-primary-200 text-sm mt-1">ID: #INV-{new Date().getTime().toString().slice(-6)}</p>
                           </div>
-                          <div className="text-left sm:text-right shrink-0">
-                            <p className="text-xs font-bold uppercase tracking-widest text-primary-300 mb-1">Balance Due</p>
-                            <p className="text-2xl sm:text-3xl font-bold text-primary-300 tabular-nums">Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="relative z-10 mt-5 flex flex-wrap items-end justify-between gap-3 border-t border-white/10 pt-4">
+                          {invoiceStatus !== 'paid' && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-300">Balance due</p>
+                              <p className="text-2xl font-bold tabular-nums text-white sm:text-3xl">
+                                Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          )}
+                          <div
+                            className={`flex flex-wrap gap-4 text-sm ${invoiceStatus === 'paid' ? 'w-full sm:justify-end' : ''}`}
+                          >
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-300/90">Issued</p>
+                              <p className="font-semibold text-white">
+                                {invoiceDate
+                                  ? new Date(invoiceDate + 'T12:00:00').toLocaleDateString('en-IN', { dateStyle: 'medium' })
+                                  : '—'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-300/90">Due</p>
+                              <p className="font-semibold text-white">
+                                {dueDate
+                                  ? new Date(dueDate + 'T12:00:00').toLocaleDateString('en-IN', { dateStyle: 'medium' })
+                                  : '—'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-300/90">Status</p>
+                              <div className="mt-1 flex flex-col items-start gap-1">
+                                <span
+                                  className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                                    invoiceStatus === 'paid'
+                                      ? 'border-emerald-400/70 bg-emerald-500/30 text-emerald-50'
+                                      : invoiceStatus === 'partially_paid'
+                                        ? 'border-sky-400/70 bg-sky-500/30 text-sky-50'
+                                        : invoiceStatus === 'overdue'
+                                          ? 'border-red-400/70 bg-red-500/30 text-red-50'
+                                          : 'border-amber-400/70 bg-amber-500/30 text-amber-50'
+                                  }`}
+                                >
+                                  {invoiceStatus === 'paid'
+                                    ? 'Paid'
+                                    : invoiceStatus === 'partially_paid'
+                                      ? 'Partially paid'
+                                      : invoiceStatus === 'overdue'
+                                        ? 'Overdue'
+                                        : 'Unpaid'}
+                                </span>
+                                {hasPaymentTerms && (
+                                  <span className="text-[9px] font-medium text-primary-200/80 max-w-[10rem] leading-tight">
+                                    Mirrors installment totals (dropdown locked)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="p-5 sm:p-6 lg:p-8">
-                        {clientGst.trim() && (
-                          <div className="mb-6">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">GST Number</p>
-                            <p className="text-sm text-primary-800/80">{clientGst.trim()}</p>
-                          </div>
-                        )}
-                        {billingAddress.trim() && (
-                          <div className="mb-6">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Billing Address</p>
-                            <p className="text-sm text-primary-800/80 whitespace-pre-line">{billingAddress.trim()}</p>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Issued Date</p>
-                            <p className="font-semibold text-primary-950">{invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Due Date</p>
-                            <p className="font-semibold text-primary-950">{dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '-'}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Status</p>
-                            <p className="font-semibold text-primary-950 capitalize">
-                              {invoiceStatus === 'paid'
-                                ? 'Paid'
-                                : invoiceStatus === 'partially_paid'
-                                  ? 'Partially Paid'
-                                  : invoiceStatus === 'overdue'
-                                    ? 'Overdue'
-                                    : 'Unpaid'}
+
+                      <div className="px-4 py-5 sm:px-6 sm:py-6">
+                        <div className="mb-5 overflow-x-auto rounded-xl border border-slate-200">
+                          <table className="w-full min-w-[300px] border-collapse text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                                <th className="px-3 py-2.5">Description</th>
+                                <th className="w-14 px-2 py-2.5 text-center">Qty</th>
+                                <th className="w-24 px-2 py-2.5 text-right">Price</th>
+                                <th className="w-28 px-3 py-2.5 text-right">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-primary-950">
+                              {items.map((item, idx) => {
+                                const qty = Number(item.quantity) || 0;
+                                const price = Number(item.price) || 0;
+                                const line = qty * price;
+                                const emptyRow = !(item.description || '').trim() && !qty && !price;
+                                return (
+                                  <tr
+                                    key={idx}
+                                    className={`border-b border-slate-100 last:border-0 ${emptyRow ? 'bg-slate-50/50' : ''}`}
+                                  >
+                                    <td className="px-3 py-2.5 text-slate-800">
+                                      {(item.description || '').trim() || (
+                                        <span className="italic text-slate-400">Item details</span>
+                                      )}
+                                    </td>
+                                    <td className="px-2 py-2.5 text-center tabular-nums text-slate-700">{qty || '—'}</td>
+                                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-700">
+                                      Rs. {price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums">
+                                      Rs. {line.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                          {!previewHasLineItems && (
+                            <p className="border-t border-slate-100 px-3 py-4 text-center text-xs text-slate-500">
+                              Add descriptions and amounts on the left — they appear here instantly.
                             </p>
-                          </div>
+                          )}
                         </div>
 
-                        <div className="space-y-0 mb-8">
-                          <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 border-b border-primary-100 pb-2 mb-3">Summary</p>
-                          <div className="flex items-center justify-between py-2.5 text-sm">
-                            <span className="text-primary-700/80">Subtotal</span>
-                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        {hasPaymentTerms && paymentTerms.some((t) => Number(t.percentage) > 0) && (
+                          <div className="mb-5 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-primary-700 mb-2">
+                              Payment schedule
+                            </p>
+                            <ul className="space-y-2 text-sm">
+                              {paymentTerms
+                                .filter((t) => Number(t.percentage) > 0)
+                                .map((term, i) => {
+                                  const pct = Number(term.percentage) || 0;
+                                  const amt = (Number(totals.total) || 0) * (pct / 100);
+                                  return (
+                                    <li
+                                      key={i}
+                                      className="flex flex-wrap items-center justify-between gap-2 border-b border-primary-100/80 pb-2 last:border-0 last:pb-0"
+                                    >
+                                      <span className="text-primary-900">
+                                        {term.label?.trim() || `Installment ${i + 1}`}{' '}
+                                        <span className="text-primary-600">({pct}%)</span>
+                                      </span>
+                                      <span className="font-semibold tabular-nums text-primary-950">
+                                        Rs. {amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                            </ul>
                           </div>
-                          <div className="flex items-center justify-between py-2.5 text-sm">
-                            <span className="text-primary-700/80">Previous Balance Due</span>
-                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {linkedClientPreviousDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        )}
+
+                        <div className="space-y-0 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Summary</p>
+                          <div className="flex items-center justify-between py-1.5 text-sm">
+                            <span className="text-slate-600">Subtotal</span>
+                            <span className="font-semibold tabular-nums text-slate-900">
+                              Rs. {totals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <div className="flex items-center justify-between py-2.5 text-sm">
-                            <span className="text-primary-700/80">Paid via Installments</span>
-                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {paidAmountFromTerms.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <div className="flex items-center justify-between py-1.5 text-sm">
+                            <span className="text-slate-600">Previous balance</span>
+                            <span className="font-semibold tabular-nums text-slate-900">
+                              Rs. {linkedClientPreviousDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <div className="flex items-center justify-between py-2.5 text-sm">
-                            <span className="text-primary-700/80">Current Invoice Outstanding</span>
-                            <span className="font-semibold text-primary-950 tabular-nums">Rs. {currentInvoiceOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          {hasPaymentTerms && (
+                            <div className="flex items-center justify-between py-1.5 text-sm">
+                              <span className="text-slate-600">Settled (installments)</span>
+                              <span className="font-semibold tabular-nums text-slate-900">
+                                Rs. {paidAmountFromTerms.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between py-1.5 text-sm">
+                            <span className="text-slate-600">This invoice outstanding</span>
+                            <span className="font-semibold tabular-nums text-slate-900">
+                              Rs. {currentInvoiceOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <div className="flex items-center justify-between py-3 mt-1 border-t-2 border-primary-200 text-base">
-                            <span className="font-bold text-primary-950">Balance Due</span>
-                            <span className="font-bold text-primary-600 tabular-nums">Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          </div>
+                          {previewPaidInFull ? (
+                            <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2.5 text-base">
+                              <span className="font-bold text-emerald-800">Amount paid</span>
+                              <span className="font-bold tabular-nums text-emerald-700">
+                                Rs. {invoiceTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2.5 text-base">
+                              <span className="font-bold text-slate-900">Balance due</span>
+                              <span className="font-bold tabular-nums text-primary-700">
+                                Rs. {totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
-                        {notes && (
-                          <div className="bg-primary-50/50 rounded-xl p-4 border border-primary-100">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary-600/80 mb-1">Notes</p>
-                            <p className="text-sm text-primary-800/80 italic">{notes}</p>
+                        {notes.trim() && (
+                          <div className="mt-5 rounded-xl border border-primary-100 bg-primary-50/40 p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-primary-700 mb-1.5">Notes &amp; terms</p>
+                            <p className="whitespace-pre-line text-sm leading-relaxed text-primary-900/90">{notes.trim()}</p>
                           </div>
                         )}
                       </div>
-                      
-                      <div className="bg-primary-50/30 p-4 text-center border-t border-primary-100">
-                        <p className="text-xs text-primary-600/80">This is a preview of how the invoice will appear to the client.</p>
+
+                      <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-center">
+                        <p className="text-[11px] text-slate-600">
+                          Client-facing preview · download PDF to see pagination and final typography
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2491,80 +3004,527 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ── Announcements ── */}
-            {activeSection === 'announcements' && (
-              <div className="space-y-6 animate-fade-in-up">
-                {/* Create form */}
-                <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60">
-                  <h2 className="text-base font-bold text-primary-950 mb-5 flex items-center gap-2"><Megaphone className="w-5 h-5 text-primary-500" />Post Announcement</h2>
-                  <form onSubmit={handleCreateAnnouncement} className="space-y-4">
+            {/* ── Quotation Generator ── */}
+            {activeSection === 'quotations' && (
+              <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60 animate-fade-in-up">
+                <h2 className="text-base font-bold text-primary-950 mb-5 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary-500" />
+                  Quotation Generator
+                </h2>
+                <form onSubmit={handleDownloadQuotation} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Title *</label>
-                      <input value={annForm.title} onChange={(e) => setAnnForm((p) => ({ ...p, title: e.target.value }))} placeholder="Announcement title" required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900" />
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Your Company Name</label>
+                      <input
+                        value={quotationForm.companyName}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, companyName: e.target.value }))}
+                        placeholder="e.g. Rastogi Codeworks"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Content *</label>
-                      <textarea value={annForm.content} onChange={(e) => setAnnForm((p) => ({ ...p, content: e.target.value }))} rows={3} placeholder="Write your announcement…" required className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none" />
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Client Name *</label>
+                      <input
+                        value={quotationForm.clientName}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, clientName: e.target.value }))}
+                        placeholder="Client name"
+                        required
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
                     </div>
-                    <div className="flex flex-wrap items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm font-medium text-primary-700 cursor-pointer">
-                        <input type="checkbox" checked={annForm.pinned} onChange={(e) => setAnnForm((p) => ({ ...p, pinned: e.target.checked }))} className="w-4 h-4 accent-primary-600" />
-                        Pin to top
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Audience:</label>
-                        <div className="relative">
-                          <select value={annForm.audience} onChange={(e) => setAnnForm((p) => ({ ...p, audience: e.target.value }))} className="appearance-none px-3 py-1.5 pr-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-medium text-slate-900 outline-none focus:border-primary-500">
-                            <option value="all">All Clients</option>
-                            {clients.map((c) => <option key={c._id} value={c.email}>{c.name || c.email}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Your Company Logo (quotation only)</label>
+                      <input
+                        id="quotation-company-logo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQuotationLogoUpload('companyLogoDataUrl')}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="quotation-company-logo-upload"
+                        onDragOver={handleQuotationLogoDragOver('companyLogoDataUrl')}
+                        onDrop={handleQuotationLogoDrop('companyLogoDataUrl')}
+                        onDragLeave={handleQuotationLogoDragLeave}
+                        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 transition ${
+                          draggingLogoField === 'companyLogoDataUrl'
+                            ? 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-200'
+                            : 'border-slate-300 bg-slate-50 hover:border-primary-400 hover:bg-primary-50/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 text-slate-600">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
+                            <ImagePlus className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">{quotationForm.companyLogoDataUrl ? 'Replace logo image' : 'Upload company logo'}</span>
                         </div>
+                        <span className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                          Browse
+                        </span>
+                      </label>
+                      {draggingLogoField === 'companyLogoDataUrl' && (
+                        <p className="text-[11px] font-medium text-primary-600">Drop image here</p>
+                      )}
+                      {quotationForm.companyLogoDataUrl && (
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-2">
+                          <img
+                            src={quotationForm.companyLogoDataUrl}
+                            alt="Company logo preview"
+                            className="h-14 w-28 rounded-md border border-slate-200 object-contain bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => clearQuotationLogo('companyLogoDataUrl')}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-slate-400">PNG or JPG, transparent background preferred.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Client Logo (quotation only)</label>
+                      <input
+                        id="quotation-client-logo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQuotationLogoUpload('clientLogoDataUrl')}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="quotation-client-logo-upload"
+                        onDragOver={handleQuotationLogoDragOver('clientLogoDataUrl')}
+                        onDrop={handleQuotationLogoDrop('clientLogoDataUrl')}
+                        onDragLeave={handleQuotationLogoDragLeave}
+                        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 transition ${
+                          draggingLogoField === 'clientLogoDataUrl'
+                            ? 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-200'
+                            : 'border-slate-300 bg-slate-50 hover:border-primary-400 hover:bg-primary-50/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 text-slate-600">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
+                            <ImagePlus className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">{quotationForm.clientLogoDataUrl ? 'Replace logo image' : 'Upload client logo'}</span>
+                        </div>
+                        <span className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                          Browse
+                        </span>
+                      </label>
+                      {draggingLogoField === 'clientLogoDataUrl' && (
+                        <p className="text-[11px] font-medium text-primary-600">Drop image here</p>
+                      )}
+                      {quotationForm.clientLogoDataUrl && (
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-2">
+                          <img
+                            src={quotationForm.clientLogoDataUrl}
+                            alt="Client logo preview"
+                            className="h-14 w-28 rounded-md border border-slate-200 object-contain bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => clearQuotationLogo('clientLogoDataUrl')}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-slate-400">Optional: add client brand mark for the quotation.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Service Title</label>
+                      <input
+                        value={quotationForm.projectTitle}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, projectTitle: e.target.value }))}
+                        placeholder="e.g. Website Revamp & SEO"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Service Selected</label>
+                      <div className="relative">
+                        <select
+                          value={quotationForm.serviceId}
+                          onChange={(e) => {
+                            const selected = quotationServices.find((s) => s.id === e.target.value);
+                            const defaults = getServiceDefaultContent(e.target.value);
+                            setQuotationForm((p) => ({
+                              ...p,
+                              serviceId: e.target.value,
+                              projectTitle: selected?.title || p.projectTitle,
+                              requirements: p.requirements || defaults?.requirements || '',
+                              notes: p.notes || defaults?.notes || '',
+                            }));
+                          }}
+                          className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                        >
+                          <option value="">-- Select service --</option>
+                          {quotationServices.map((s) => (
+                            <option key={s.id} value={s.id}>{s.title}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
-                    {annError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{annError}</p>}
-                    <button type="submit" disabled={annSaving} className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 text-sm flex items-center gap-2">
-                      {annSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-4 h-4" />}
-                      Post Announcement
-                    </button>
-                  </form>
-                </div>
-
-                {/* List */}
-                {announcementsLoading ? (
-                  <div className="admin-card-glass rounded-2xl flex items-center justify-center py-12"><div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>
-                ) : announcements.length === 0 ? (
-                  <div className="admin-card-glass rounded-2xl flex flex-col items-center justify-center py-16 text-center px-4">
-                    <Megaphone className="w-12 h-12 text-primary-300 mb-4" />
-                    <p className="font-semibold text-primary-950 text-lg">No announcements yet</p>
-                    <p className="text-primary-600/70 text-sm mt-1">Post your first announcement above.</p>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Quote Date</label>
+                      <input
+                        type="date"
+                        value={quotationForm.quoteDate}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, quoteDate: e.target.value }))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Valid Until</label>
+                      <input
+                        type="date"
+                        value={quotationForm.validUntil}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, validUntil: e.target.value }))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Estimated Delivery (Days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={quotationForm.deliveryDays}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryDays: e.target.value }))}
+                        placeholder="e.g. 30"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Billing Address</label>
+                      <textarea
+                        value={quotationForm.billingAddress}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, billingAddress: e.target.value }))}
+                        rows={2}
+                        placeholder="Street, City, State, PIN, Country"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Requirements For The Project (From Client)</label>
+                      <textarea
+                        value={quotationForm.requirements}
+                        onChange={(e) => setQuotationForm((p) => ({ ...p, requirements: e.target.value }))}
+                        rows={2}
+                        placeholder="Client requirements and expectations..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
+                      />
+                    </div>
                   </div>
-                ) : (
+
                   <div className="space-y-3">
-                    {announcements.map((a) => (
-                      <div key={a._id} className={`admin-card-glass rounded-2xl p-5 border ${a.pinned ? 'border-primary-300 bg-primary-50/30' : 'border-primary-100'}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              {a.pinned && <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Pin className="w-2.5 h-2.5" />Pinned</span>}
-                              {a.audience !== 'all' && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Private: {a.audience}</span>}
-                              <h3 className="font-bold text-primary-950">{a.title}</h3>
-                            </div>
-                            <p className="text-sm text-primary-700/80 mt-1 whitespace-pre-wrap">{a.content}</p>
-                            <p className="text-xs text-primary-400 mt-2">{new Date(a.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                          <button type="button" onClick={() => handleDeleteAnnouncement(a._id)} className="p-2 rounded-lg text-red-400 hover:bg-red-50 transition-colors shrink-0"><Trash2 className="w-4 h-4" /></button>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Quotation Items</label>
+                      <button
+                        type="button"
+                        onClick={addQuotationItem}
+                        className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1.5 bg-primary-50 px-3 py-2 rounded-lg border border-primary-200/60 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Item
+                      </button>
+                    </div>
+                    {quotationForm.items.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="col-span-12 sm:col-span-7">
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => handleQuotationItemChange(idx, 'description', e.target.value)}
+                            placeholder={`Item ${idx + 1} description`}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium"
+                          />
+                        </div>
+                        <div className="col-span-4 sm:col-span-2">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantity}
+                            onChange={(e) => handleQuotationItemChange(idx, 'quantity', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium text-center"
+                          />
+                        </div>
+                        <div className="col-span-6 sm:col-span-2">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => handleQuotationItemChange(idx, 'price', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none text-sm font-medium text-right"
+                          />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1 flex justify-end">
+                          <button type="button" onClick={() => removeQuotationItem(idx)} className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
+                    <div className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold bg-primary-50 border border-primary-200 text-primary-700">
+                      <span>Total</span>
+                      <span>Rs. {quotationTotals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
-                )}
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Notes &amp; remarks</label>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Auto-fills from the <span className="font-semibold text-slate-600">quote date month</span> when empty. Presets replace
+                        the whole field — edit freely after applying.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {QUOTATION_REMARK_CHIPS.map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => applyQuotationRemarkPreset(id)}
+                          className="px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-900 transition-colors"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQuotationForm((p) => ({ ...p, notes: getQuotationMonthlyRemarks(p.quoteDate) }))
+                        }
+                        className="px-3 py-1.5 rounded-full border border-primary-200 bg-primary-50 text-xs font-semibold text-primary-800 hover:bg-primary-100 transition-colors"
+                      >
+                        Refresh monthly
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuotationForm((p) => ({ ...p, notes: '' }))}
+                        className="px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <textarea
+                      value={quotationForm.notes}
+                      onChange={(e) => setQuotationForm((p) => ({ ...p, notes: e.target.value }))}
+                      rows={4}
+                      placeholder="Additional terms, assumptions, or timeline notes..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
+                    />
+                  </div>
+
+                  <button type="submit" className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 text-sm flex items-center gap-2">
+                    <Download className="w-4 h-4" />
+                    Download Quotation PDF
+                  </button>
+                </form>
               </div>
             )}
 
-            {/* Settings Section */}
+            {activeSection === 'reports' && <AdminReportsSection onError={(msg) => setError(msg || '')} />}
+            {activeSection === 'hiring' && <AdminHiringSection onError={(msg) => setError(msg || '')} />}
+
+            {/* Settings Section — main column + sticky sidebar on large screens */}
             {activeSection === 'settings' && (
-              <div className="space-y-6 animate-fade-in-up max-w-lg">
+              <div className="animate-fade-in-up w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] gap-6 lg:gap-8 xl:gap-10 items-start">
+                <div className="space-y-6 min-w-0">
+                {/* Email & notifications */}
+                <div className="admin-card-glass rounded-2xl p-5 sm:p-8 border border-primary-200/40">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-6 pb-4 border-b border-primary-100">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-base font-bold text-primary-950">Email &amp; notifications</h2>
+                        <p className="text-xs text-primary-500 mt-0.5">
+                          Controls for transactional mail (forms, careers, invoices). API keys stay on the server.
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`shrink-0 self-start sm:self-center text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                        mailTransportConfigured
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-900 border-amber-200'
+                      }`}
+                    >
+                      {mailTransportConfigured ? 'Resend ready' : 'Not configured'}
+                    </span>
+                  </div>
+
+                  {!mailTransportConfigured && (
+                    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+                      <p className="font-semibold mb-1">Add Resend to your server <code className="text-xs bg-white/60 px-1 rounded">.env</code></p>
+                      <ul className="list-disc list-inside text-xs space-y-1 text-amber-900/90">
+                        <li>
+                          <code className="bg-white/60 px-1 rounded">RESEND_API_KEY</code> — from{' '}
+                          <a href="https://resend.com" className="font-semibold underline" target="_blank" rel="noreferrer">
+                            resend.com
+                          </a>
+                        </li>
+                        <li>
+                          <code className="bg-white/60 px-1 rounded">MAIL_FROM</code> — e.g.{' '}
+                          <code className="bg-white/60 px-1 rounded">&quot;Rastogi Codeworks &lt;onboarding@yourdomain.com&gt;&quot;</code>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {appSettingsLoading && (
+                    <p className="text-sm text-slate-500 py-4">Loading settings…</p>
+                  )}
+                  {!appSettingsLoading && appSettings && (
+                    <form onSubmit={handleSaveAppSettings} className="space-y-5">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          checked={!!appSettings.emailEnabled}
+                          onChange={(e) => updateAppSetting('emailEnabled', e.target.checked)}
+                        />
+                        <span className="text-sm font-medium text-primary-950">Enable sending email from this app</span>
+                      </label>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Founder / ops inbox
+                          </label>
+                          <input
+                            type="email"
+                            value={appSettings.founderNotifyEmail || ''}
+                            onChange={(e) => updateAppSetting('founderNotifyEmail', e.target.value)}
+                            placeholder="you@company.com"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
+                          />
+                          <p className="text-[11px] text-slate-500">Copies of leads, applications, and optional invoice CC.</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">From display name</label>
+                          <input
+                            type="text"
+                            value={appSettings.emailFromName || ''}
+                            onChange={(e) => updateAppSetting('emailFromName', e.target.value)}
+                            placeholder="Rastogi Codeworks"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
+                          />
+                          <p className="text-[11px] text-slate-500">Must match a domain verified in Resend.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid lg:grid-cols-2 gap-4 lg:gap-5">
+                        <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-3 min-h-0">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">When you wire forms to the API</p>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.notifyFounderOnContact}
+                              onChange={(e) => updateAppSetting('notifyFounderOnContact', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">Notify founder on contact / enquiry submissions</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.sendContactConfirmToUser}
+                              onChange={(e) => updateAppSetting('sendContactConfirmToUser', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">Send confirmation email to the person who submitted</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.notifyFounderOnCareersApply}
+                              onChange={(e) => updateAppSetting('notifyFounderOnCareersApply', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">Notify founder on careers applications</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.sendCareersConfirmToApplicant}
+                              onChange={(e) => updateAppSetting('sendCareersConfirmToApplicant', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">Send confirmation to job applicants</span>
+                          </label>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-3 min-h-0">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Invoices</p>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.invoiceEmailDefaultOn}
+                              onChange={(e) => updateAppSetting('invoiceEmailDefaultOn', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">Default “email client” to on when creating invoices (UI)</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              checked={!!appSettings.invoiceCcFounder}
+                              onChange={(e) => updateAppSetting('invoiceCcFounder', e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-800">CC founder inbox when emailing invoices</span>
+                          </label>
+                          <div className="pt-2 mt-1 border-t border-slate-200/80">
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                              Invoice PDFs still send from the server; these options only control defaults and whether you are copied.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {appSettingsMsg.text && (
+                        <p
+                          className={`text-sm flex items-center gap-2 ${
+                            appSettingsMsg.type === 'success' ? 'text-emerald-700' : 'text-red-600'
+                          }`}
+                        >
+                          {appSettingsMsg.type === 'success' ? (
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                          )}
+                          {appSettingsMsg.text}
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="submit"
+                          disabled={appSettingsSaving}
+                          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
+                        >
+                          {appSettingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                          Save email settings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendTestEmail}
+                          disabled={testEmailLoading || !mailTransportConfigured}
+                          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          {testEmailLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          Send test email
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
                 {/* Change Password */}
                 <div className="admin-card-glass rounded-2xl p-5 sm:p-8">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-primary-100">
@@ -2620,6 +3580,119 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+                </div>
+
+                <aside className="space-y-4 lg:sticky lg:top-24 xl:top-28 self-start">
+                  <div className="rounded-2xl border border-primary-200/70 bg-gradient-to-b from-primary-50/90 to-white p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary-600 text-white flex items-center justify-center shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-primary-950">On this page</h3>
+                        <p className="text-[11px] text-primary-600">Quick map of your workspace settings</p>
+                      </div>
+                    </div>
+                    <ul className="space-y-2.5 text-sm text-primary-800">
+                      <li className="flex gap-2">
+                        <Mail className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
+                        <span><span className="font-semibold text-primary-950">Email</span> — routing for forms, careers, and invoices</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Lock className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
+                        <span><span className="font-semibold text-primary-950">Security</span> — change your admin password</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <User className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
+                        <span><span className="font-semibold text-primary-950">Account</span> — role and billing activity summary</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Delivery readiness</h3>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-2.5 text-sm">
+                        {mailTransportConfigured ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        )}
+                        <span className="text-slate-700">
+                          {mailTransportConfigured
+                            ? 'Server mail transport is configured (Resend).'
+                            : 'Configure Resend on the server to send real mail.'}
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2.5 text-sm">
+                        {appSettings?.founderNotifyEmail?.includes('@') ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                        )}
+                        <span className="text-slate-700">
+                          {appSettings?.founderNotifyEmail?.includes('@')
+                            ? 'Founder inbox set for internal notifications.'
+                            : 'Add a founder / ops inbox so you get lead and application alerts.'}
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2.5 text-sm">
+                        {appSettings?.emailEnabled && mailTransportConfigured ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                        )}
+                        <span className="text-slate-700">
+                          {appSettings?.emailEnabled && mailTransportConfigured
+                            ? 'Sending is enabled and transport is ready.'
+                            : 'Turn on “Enable sending email” after transport is ready.'}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BookOpen className="w-4 h-4 text-primary-600" />
+                      <h3 className="text-sm font-bold text-primary-950">Resources</h3>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                      Verify your domain in Resend so <code className="text-[10px] bg-white px-1 rounded border">MAIL_FROM</code> matches a
+                      verified sender.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href="https://resend.com/docs"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-primary-700 hover:text-primary-900"
+                      >
+                        Resend documentation
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      </a>
+                      <a
+                        href="https://resend.com/domains"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-primary-700 hover:text-primary-900"
+                      >
+                        Domain &amp; DNS setup
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-primary-100 bg-primary-900/95 text-primary-100 p-5 text-xs leading-relaxed">
+                    <div className="flex items-center gap-2 text-white font-bold text-sm mb-2">
+                      <ShieldCheck className="w-4 h-4 text-primary-300" />
+                      Privacy
+                    </div>
+                    <p className="text-primary-200/90">
+                      API keys and secrets are never exposed in the browser. Only toggles and addresses you save here are stored with your app
+                      settings.
+                    </p>
+                  </div>
+                </aside>
               </div>
             )}
 

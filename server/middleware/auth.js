@@ -79,6 +79,14 @@ export function requireClient(req, res, next) {
   next();
 }
 
+export function requireEmployee(req, res, next) {
+  if (!req.user) return requireAuth(req, res, () => requireEmployee(req, res, next));
+  if (req.user.role !== 'employee') {
+    return res.status(403).json({ success: false, message: 'Employee access required.' });
+  }
+  next();
+}
+
 // Legacy helpers for existing admin-only cookie name (optional; can remove once frontend uses new token)
 export function issueAdminToken(res, payload) {
   issueToken(res, { ...payload, role: 'admin' });

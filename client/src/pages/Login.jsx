@@ -54,6 +54,12 @@ export default function Login() {
         navigate('/dashboard', { replace: true });
         return;
       }
+      if (data.user?.role === 'employee') {
+        localStorage.setItem('isEmployee', 'true');
+        localStorage.setItem('employeeName', data.user?.name || data.user?.email?.split('@')[0] || 'Team member');
+        navigate('/employee', { replace: true });
+        return;
+      }
       setClientMessage('Unknown account type. Please contact support.');
     } catch {
       let msg = 'Network error. Please try again.';
@@ -67,8 +73,35 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      {/* Mobile: sticky bar aligned with dashboard nav */}
+      <header className="sticky top-0 z-50 shrink-0 border-b border-primary-200/80 bg-white/95 backdrop-blur-xl supports-[backdrop-filter]:bg-white/92 lg:hidden pt-[max(8px,env(safe-area-inset-top,0px))]">
+        <div className="mx-auto flex max-w-6xl min-h-[3.25rem] items-center justify-between gap-3 px-3 py-2 sm:px-4">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label="Rastogi Codeworks home">
+            <img
+              src="/transparent_logo.png"
+              alt=""
+              className="h-9 w-9 shrink-0 object-contain"
+            />
+            <span className="min-w-0">
+              <span className="block truncate font-brand text-sm font-semibold italic tracking-tight text-primary-950">
+                Rastogi Codeworks
+              </span>
+              <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-widest text-primary-600">
+                Sign in
+              </span>
+            </span>
+          </Link>
+          <Link
+            to="/"
+            className="shrink-0 rounded-full border border-primary-200/80 bg-primary-50/80 px-3 py-2 text-xs font-bold text-primary-800 transition-colors hover:bg-primary-100"
+          >
+            Home
+          </Link>
+        </div>
+      </header>
+
       {/* Full-page hero strip  -  sets the tone */}
-      <section className="relative pt-28 pb-8 md:pt-36 md:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-6 pb-8 sm:pt-28 md:pt-36 md:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-primary-50/30" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-grid-fade pointer-events-none" />
         <div className="absolute top-0 right-0 w-[min(80vw,600px)] h-[min(80vw,600px)] bg-primary-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
@@ -138,7 +171,7 @@ export default function Login() {
               <div className="rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 p-6 md:p-8 lg:p-10">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
                 <p className="text-slate-600 mb-6">
-                  Enter your client portal credentials.{' '}
+                  Sign in with the email and password for your account (client portal, team workspace, or admin).{' '}
                   <Link to="/contact" className="text-primary-600 font-semibold hover:underline">
                     Need access?
                   </Link>

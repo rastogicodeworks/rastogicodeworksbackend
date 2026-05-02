@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { Invoice } from '../models/Invoice.js';
-import { requireAuth, requireAdmin, requireClient } from '../middleware/auth.js';
+import { requireAuth, requireAdmin, requireClient, requireEmployee } from '../middleware/auth.js';
 import { User } from '../models/User.js';
 import { Project } from '../models/Project.js';
 import { Announcement } from '../models/Announcement.js';
+import { EmployeeTask } from '../models/EmployeeTask.js';
+import { JobApplication } from '../models/JobApplication.js';
+import { JobPosting } from '../models/JobPosting.js';
 
 export const dashboardRouter = Router();
 
@@ -148,6 +151,262 @@ dashboardRouter.get('/client', requireAuth, requireClient, async (req, res) => {
   } catch (err) {
     console.error('[dashboard/client] error', err);
     res.status(500).json({ success: false, message: 'Failed to load dashboard.' });
+  }
+});
+
+// GET /api/dashboard/employee — employee workspace
+dashboardRouter.get('/employee', requireAuth, requireEmployee, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const user = await User.findById(req.user.id).select('name email').lean();
+    const tasks = await EmployeeTask.find({ assigneeEmail: email }).sort({ createdAt: -1 }).lean();
+    const statusRank = { todo: 0, in_progress: 1, done: 2 };
+    tasks.sort((a, b) => {
+      const ra = statusRank[a.status] ?? 9;
+      const rb = statusRank[b.status] ?? 9;
+      if (ra !== rb) return ra - rb;
+      const da = a.dueDate || '';
+      const db = b.dueDate || '';
+      if (da !== db) return da.localeCompare(db);
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    const announcements = await Announcement.find({
+      $or: [{ audience: 'employees' }, { audience: email }],
+    })
+      .sort({ pinned: -1, createdAt: -1 })
+      .lean();
+
+    const openTasks = tasks.filter((t) => t.status !== 'done').length;
+    const doneTasks = tasks.filter((t) => t.status === 'done').length;
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          name: user?.name || user?.email?.split('@')[0] || 'Team member',
+          email: user?.email,
+        },
+        tasks: tasks.map((t) => ({
+          id: t._id.toString(),
+          title: t.title,
+          description: t.description || '',
+          dueDate: t.dueDate || '',
+          priority: t.priority,
+          status: t.status,
+          createdAt: t.createdAt,
+        })),
+        announcements,
+        summary: {
+          tasksTotal: tasks.length,
+          openTasks,
+          doneTasks,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('[dashboard/employee]', err);
+    res.status(500).json({ success: false, message: 'Failed to load employee dashboard.' });
+  }
+});
+
+// PATCH /api/dashboard/employee/tasks/:id — employee updates task status only
+dashboardRouter.patch('/employee/tasks/:id', requireAuth, requireEmployee, async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    if (!['todo', 'in_progress', 'done'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status.' });
+    }
+    const task = await EmployeeTask.findOne({
+      _id: req.params.id,
+      assigneeEmail: req.user.email,
+    });
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found.' });
+    }
+    task.status = status;
+    await task.save();
+    return res.json({
+      success: true,
+      task: {
+        id: task._id.toString(),
+        title: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        priority: task.priority,
+        status: task.status,
+      },
+    });
+  } catch (err) {
+    console.error('[dashboard/employee/task-patch]', err);
+    res.status(500).json({ success: false, message: 'Failed to update task.' });
+  }
+});
+
+// GET /api/dashboard/admin/notifications — activity feed (poll every ~30s for near real-time UI)
+dashboardRouter.get('/admin/notifications', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const items = [];
+    const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const newApps = await JobApplication.find({ status: 'new', createdAt: { $gte: since } })
+      .populate('jobPosting', 'title')
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean();
+
+    for (const a of newApps) {
+      items.push({
+        id: `app-${a._id}`,
+        type: 'hiring',
+        title: 'New applicant',
+        body: `${a.applicantName} · ${a.jobPosting?.title || 'Role'}`,
+        section: 'hiring',
+        createdAt: a.createdAt,
+      });
+    }
+
+    const disputed = await Invoice.find({ 'dispute.flagged': true })
+      .sort({ updatedAt: -1 })
+      .limit(8)
+      .lean();
+
+    for (const inv of disputed) {
+      const note = (inv.dispute?.note || '').trim();
+      items.push({
+        id: `dispute-${inv._id}`,
+        type: 'dispute',
+        title: 'Invoice disputed',
+        body: `${inv.clientName}${note ? ` · ${note.slice(0, 72)}${note.length > 72 ? '…' : ''}` : ''}`,
+        section: 'invoices',
+        createdAt: inv.updatedAt || inv.createdAt,
+      });
+    }
+
+    const overdueCount = await Invoice.countDocuments({ status: 'overdue' });
+    if (overdueCount > 0) {
+      items.push({
+        id: 'summary-overdue',
+        type: 'billing',
+        title: 'Overdue invoices',
+        body: `${overdueCount} invoice(s) need attention`,
+        section: 'invoices',
+        createdAt: new Date(),
+      });
+    }
+
+    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.json({
+      success: true,
+      notifications: items.slice(0, 20),
+      polledAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[dashboard/admin/notifications]', err);
+    return res.status(500).json({ success: false, message: 'Failed to load notifications.' });
+  }
+});
+
+// GET /api/dashboard/admin/report — full snapshot for Reports page & exports
+dashboardRouter.get('/admin/report', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const fromRaw = req.query.from ? String(req.query.from).slice(0, 10) : '';
+    const toRaw = req.query.to ? String(req.query.to).slice(0, 10) : '';
+    const invoiceQuery = {};
+    if (fromRaw || toRaw) {
+      invoiceQuery.createdAt = {};
+      if (fromRaw && /^\d{4}-\d{2}-\d{2}$/.test(fromRaw)) {
+        invoiceQuery.createdAt.$gte = new Date(`${fromRaw}T00:00:00.000Z`);
+      }
+      if (toRaw && /^\d{4}-\d{2}-\d{2}$/.test(toRaw)) {
+        invoiceQuery.createdAt.$lte = new Date(`${toRaw}T23:59:59.999Z`);
+      }
+      if (Object.keys(invoiceQuery.createdAt).length === 0) delete invoiceQuery.createdAt;
+    }
+
+    const [
+      invoices,
+      clientsCount,
+      employeesCount,
+      projectsCount,
+      openJobsCount,
+      jobsTotal,
+      applicationsTotal,
+      appStatusAgg,
+      taskStatusAgg,
+    ] = await Promise.all([
+      Invoice.find(invoiceQuery).sort({ createdAt: -1 }).lean(),
+      User.countDocuments({ role: 'client' }),
+      User.countDocuments({ role: 'employee' }),
+      Project.countDocuments(),
+      JobPosting.countDocuments({ status: 'open' }),
+      JobPosting.countDocuments(),
+      JobApplication.countDocuments(),
+      JobApplication.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      EmployeeTask.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    ]);
+
+    const applicationsByStatus = {};
+    for (const row of appStatusAgg) {
+      applicationsByStatus[row._id || 'unknown'] = row.count;
+    }
+    const tasksByStatus = {};
+    for (const row of taskStatusAgg) {
+      tasksByStatus[row._id || 'unknown'] = row.count;
+    }
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const paidRevenue = invoices
+      .filter((inv) => inv.status === 'paid')
+      .reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const overdueCount = invoices.filter((inv) => inv.status === 'overdue').length;
+    const unpaidCount = invoices.filter((inv) => inv.status !== 'paid').length;
+
+    const invoiceRows = invoices.map((inv) => ({
+      id: inv._id.toString(),
+      invoiceRef: `INV-${String(inv._id).slice(-6).toUpperCase()}`,
+      clientName: inv.clientName || '',
+      clientEmail: inv.clientEmail || '',
+      invoiceDate: inv.invoiceDate || '',
+      dueDate: inv.dueDate || '',
+      total: inv.total ?? 0,
+      status: inv.status || 'unpaid',
+      createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : '',
+    }));
+
+    const filterFrom = fromRaw && /^\d{4}-\d{2}-\d{2}$/.test(fromRaw) ? fromRaw : null;
+    const filterTo = toRaw && /^\d{4}-\d{2}-\d{2}$/.test(toRaw) ? toRaw : null;
+
+    return res.json({
+      success: true,
+      generatedAt: new Date().toISOString(),
+      filters: {
+        from: filterFrom,
+        to: filterTo,
+        allTime: !invoiceQuery.createdAt,
+      },
+      summary: {
+        invoicesCount: invoices.length,
+        totalRevenue,
+        paidRevenue,
+        pendingRevenue: totalRevenue - paidRevenue,
+        overdueCount,
+        unpaidCount,
+        clientsCount,
+        employeesCount,
+        projectsCount,
+        openJobPostings: openJobsCount,
+        jobPostingsTotal: jobsTotal,
+        applicationsTotal,
+        applicationsByStatus,
+        tasksByStatus,
+      },
+      invoices: invoiceRows,
+    });
+  } catch (err) {
+    console.error('[dashboard/admin/report]', err);
+    return res.status(500).json({ success: false, message: 'Failed to build report.' });
   }
 });
 

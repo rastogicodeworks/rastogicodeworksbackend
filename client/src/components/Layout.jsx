@@ -4,9 +4,14 @@ import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
 import CookieConsent from './CookieConsent';
 import VisitEngagementPopup from './VisitEngagementPopup';
+const STANDALONE_DASHBOARD_PREFIXES = ['/admin', '/dashboard', '/employee'];
+
 export default function Layout() {
   const location = useLocation();
-  const isStandalonePage = location.pathname === '/admin' || location.pathname === '/dashboard';
+  const path = location.pathname.replace(/\/+$/, '') || '/';
+  const isStandalonePage = STANDALONE_DASHBOARD_PREFIXES.some(
+    (p) => path === p || path.startsWith(`${p}/`),
+  );
 
   if (isStandalonePage) {
     return <Outlet />;

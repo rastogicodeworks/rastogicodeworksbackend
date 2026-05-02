@@ -12,6 +12,7 @@ import Clients from './pages/Clients';
 import Login from './pages/Login';
 import ClientDashboard from './pages/ClientDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import CaseStudies from './pages/CaseStudies';
@@ -25,6 +26,7 @@ import RefundPolicy from './pages/RefundPolicy';
 import SecurityPolicy from './pages/SecurityPolicy';
 import Sitemap from './pages/Sitemap';
 import Team from './pages/Team';
+import Careers from './pages/Careers';
 
 function isAdminAuthenticated() {
   if (typeof window === 'undefined') return false;
@@ -36,12 +38,21 @@ function isClientAuthenticated() {
   return localStorage.getItem('isClient') === 'true';
 }
 
+function isEmployeeAuthenticated() {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('isEmployee') === 'true';
+}
+
 function AdminRoute({ children }) {
   return isAdminAuthenticated() ? children : <Navigate to="/login" replace />;
 }
 
 function ClientRoute({ children }) {
   return isClientAuthenticated() ? children : <Navigate to="/login" replace />;
+}
+
+function EmployeeRoute({ children }) {
+  return isEmployeeAuthenticated() ? children : <Navigate to="/login" replace />;
 }
 
 function App() {
@@ -67,6 +78,14 @@ function App() {
             </ClientRoute>
           }
         />
+        <Route
+          path="employee"
+          element={
+            <EmployeeRoute>
+              <EmployeeDashboard />
+            </EmployeeRoute>
+          }
+        />
         <Route path="blog" element={<Blog />} />
         <Route path="blog/:slug" element={<BlogPost />} />
         <Route path="case-studies" element={<CaseStudies />} />
@@ -80,6 +99,7 @@ function App() {
         <Route path="security-policy" element={<SecurityPolicy />} />
         <Route path="sitemap" element={<Sitemap />} />
         <Route path="team" element={<Team />} />
+        <Route path="careers" element={<Careers />} />
         <Route
           path="admin"
           element={

@@ -7,9 +7,13 @@ export const announcementsRouter = Router();
 // GET /api/announcements — admin sees all, client sees own + 'all'
 announcementsRouter.get('/', requireAuth, async (req, res) => {
   try {
-    const query = req.user.role === 'admin'
-      ? {}
-      : { $or: [{ audience: 'all' }, { audience: req.user.email }] };
+    let query;
+    if (req.user.role === 'admin') query = {};
+    else if (req.user.role === 'employee') {
+      query = { $or: [{ audience: 'employees' }, { audience: req.user.email }] };
+    } else {
+      query = { $or: [{ audience: 'all' }, { audience: req.user.email }] };
+    }
     const announcements = await Announcement.find(query).sort({ pinned: -1, createdAt: -1 }).lean();
     return res.json({ success: true, announcements });
   } catch (err) {

@@ -232,7 +232,32 @@ invoicesRouter.patch('/:id', async (req, res) => {
           : (await Invoice.findById(id).select('previousBalanceDue').lean())?.previousBalanceDue || 0;
         const currentOutstanding = computeOutstandingFromTerms(update.paymentTerms, baseTotal, currentStatus);
         const settledAmount = Math.max(0, baseTotal - currentOutstanding);
-        update.balanceDue = update.linkedPartialInvoiceId
+        const linkedId = update.linkedPartialInvoiceId !== undefined
+          ? update.linkedPartialInvoiceId
+          : (await Invoice.findById(id).select('linkedPartialInvoiceId').lean())?.linkedPartialInvoiceId;
+        update.balanceDue = linkedId
+          ? Math.max(0, (Number(prevDue) || 0) - settledAmount)
+          : Math.max(0, currentOutstanding + (Number(prevDue) || 0));
+      }
+    } else if (balanceDue === undefined && update.status !== undefined) {
+      // Status-only updates (e.g. mark paid) must refresh balanceDue; otherwise PDF/UI keep stale amounts.
+      const existing = await Invoice.findById(id)
+        .select('total paymentTerms previousBalanceDue linkedPartialInvoiceId')
+        .lean();
+      if (existing) {
+        const baseTotal = update.total !== undefined ? update.total : existing.total || 0;
+        const terms = existing.paymentTerms || [];
+        const prevDue =
+          update.previousBalanceDue !== undefined
+            ? update.previousBalanceDue
+            : existing.previousBalanceDue || 0;
+        const currentOutstanding = computeOutstandingFromTerms(terms, baseTotal, update.status);
+        const settledAmount = Math.max(0, baseTotal - currentOutstanding);
+        const linked =
+          update.linkedPartialInvoiceId !== undefined
+            ? update.linkedPartialInvoiceId
+            : existing.linkedPartialInvoiceId;
+        update.balanceDue = linked
           ? Math.max(0, (Number(prevDue) || 0) - settledAmount)
           : Math.max(0, currentOutstanding + (Number(prevDue) || 0));
       }

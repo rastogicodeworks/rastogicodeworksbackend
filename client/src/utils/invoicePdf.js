@@ -31,6 +31,13 @@ function loadImageAsDataUrl(url) {
 /**
  * Generate a professional invoice PDF with company logo and all invoice details.
  */
+function normalizeInvoiceStatus(status) {
+  return String(status ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+}
+
 export async function generateInvoicePdf({
   clientName,
   billingAddress = '',
@@ -42,6 +49,9 @@ export async function generateInvoicePdf({
   totals = { subtotal: 0, total: 0 },
   paymentTerms = [],
   invoiceId = `INV-${Date.now().toString().slice(-6)}`,
+  documentTitle = 'INVOICE',
+  /** Backend or UI status: paid | unpaid | … — when paid, balance reflects only previousBalanceDue */
+  status = '',
 }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -51,6 +61,47 @@ export async function generateInvoicePdf({
   const footerReserve = 18;
   const safeBottom = pageH - margin - footerReserve;
   let y = margin;
+
+  const startNewPage = () => {
+    doc.addPage();
+    y = margin;
+  };
+  const ensureSpace = (requiredHeight, onBreak) => {
+    if (y + requiredHeight > safeBottom) {
+      startNewPage();
+      if (onBreak) onBreak();
+    }
+  };
+
+  // Balances + status (before header so title + right column follow status)
+  const previousBalanceDue = Math.max(0, Number(totals.previousBalanceDue) || 0);
+  const currentInvoiceTotal = Number(totals.total) || 0;
+  const paidFromTerms = Array.isArray(paymentTerms)
+    ? paymentTerms.reduce((sum, term) => {
+      const pct = Number(term?.percentage) || 0;
+      if (pct <= 0) return sum;
+      const termAmount = currentInvoiceTotal * pct / 100;
+      const termSt = String(term?.status || 'due');
+      if (termSt === 'paid') return sum + termAmount;
+      if (termSt === 'partially_paid') {
+        const partial = Math.max(0, Number(term?.partialAmount) || 0);
+        return sum + Math.min(partial, termAmount);
+      }
+      return sum;
+    }, 0)
+    : 0;
+  let currentOutstanding = Math.max(0, currentInvoiceTotal - paidFromTerms);
+  let computedBalanceDue = Math.max(0, Number(totals.balanceDue) || (currentOutstanding + previousBalanceDue));
+  const statusNorm = normalizeInvoiceStatus(status);
+  const isInvoicePaid = statusNorm === 'paid';
+  const isPartiallyPaid = statusNorm === 'partially_paid';
+  const isOverdue = statusNorm === 'overdue';
+  if (isInvoicePaid) {
+    currentOutstanding = 0;
+    computedBalanceDue = Math.max(0, previousBalanceDue);
+  }
+  const paidInFull = isInvoicePaid && computedBalanceDue <= 0;
+  const settledNoBalanceDue = paidInFull;
 
   // ----- Header: Logo + Company (left) | Invoice title + meta (right) -----
   const headerY = y;
@@ -82,11 +133,12 @@ export async function generateInvoicePdf({
   doc.setTextColor(100, 116, 139);
   doc.text(COMPANY_TAGLINE, margin + 28, headerY + 14);
 
-  // Right: INVOICE title + Invoice No., Issued, Due
-  doc.setFontSize(20);
+  // Right: document title + Invoice No., Issued, Due (paid → "PAID INVOICE" in header; no balance box later)
+  const headerDocTitle = isInvoicePaid ? 'PAID INVOICE' : String(documentTitle || 'INVOICE');
+  doc.setFontSize(isInvoicePaid ? 17 : 20);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(5, 46, 22);
-  doc.text('INVOICE', pageW - margin, headerY + 6, { align: 'right' });
+  doc.text(headerDocTitle, pageW - margin, headerY + 6, { align: 'right' });
   doc.setFontSize(9);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(71, 85, 105);
@@ -108,42 +160,12 @@ export async function generateInvoicePdf({
   doc.line(margin, y, pageW - margin, y);
   y += 14;
 
-  const startNewPage = () => {
-    doc.addPage();
-    y = margin;
-  };
-  const ensureSpace = (requiredHeight, onBreak) => {
-    if (y + requiredHeight > safeBottom) {
-      startNewPage();
-      if (onBreak) onBreak();
-    }
-  };
-
-  const previousBalanceDue = Math.max(0, Number(totals.previousBalanceDue) || 0);
-  const currentInvoiceTotal = Number(totals.total) || 0;
-  const paidFromTerms = Array.isArray(paymentTerms)
-    ? paymentTerms.reduce((sum, term) => {
-      const pct = Number(term?.percentage) || 0;
-      if (pct <= 0) return sum;
-      const termAmount = currentInvoiceTotal * pct / 100;
-      const status = String(term?.status || 'due');
-      if (status === 'paid') return sum + termAmount;
-      if (status === 'partially_paid') {
-        const partial = Math.max(0, Number(term?.partialAmount) || 0);
-        return sum + Math.min(partial, termAmount);
-      }
-      return sum;
-    }, 0)
-    : 0;
-  const currentOutstanding = Math.max(0, currentInvoiceTotal - paidFromTerms);
-  const computedBalanceDue = Math.max(0, Number(totals.balanceDue) || (currentOutstanding + previousBalanceDue));
-
-  // ----- Bill To + right-side balance summary -----
+  // ----- Bill To + right-side balance summary (only for unpaid / partial / overdue) -----
   const billToStartY = y;
   const rightBoxW = 72;
   const rightBoxX = pageW - margin - rightBoxW;
   const leftTextMaxW = rightBoxX - margin - 8;
-  ensureSpace(42);
+  ensureSpace(50);
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(15, 23, 42);
@@ -170,28 +192,70 @@ export async function generateInvoicePdf({
     y += 6;
   }
 
-  // Right side balance summary card
+  // Right: balance-due card for unpaid / partially paid / overdue only (no box when status is paid)
   const boxY = billToStartY;
-  const boxH = 34;
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(rightBoxX, boxY, rightBoxW, boxH, 2, 2, 'FD');
-  doc.setFontSize(8);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(100, 116, 139);
-  doc.text('BALANCE DUE', rightBoxX + rightBoxW / 2, boxY + 8, { align: 'center' });
-  doc.setFontSize(14);
-  doc.setTextColor(5, 46, 22);
-  doc.text(`${CURRENCY} ${computedBalanceDue.toFixed(2)}`, rightBoxX + rightBoxW / 2, boxY + 17, { align: 'center' });
-  doc.setFontSize(8);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Current: ${CURRENCY} ${currentOutstanding.toFixed(2)}`, rightBoxX + rightBoxW / 2, boxY + 24, { align: 'center' });
-  if (previousBalanceDue > 0) {
-    doc.text(`Previous: ${CURRENCY} ${previousBalanceDue.toFixed(2)}`, rightBoxX + rightBoxW / 2, boxY + 30, { align: 'center' });
+  let summaryCardH = 0;
+  if (!isInvoicePaid) {
+    const showStatusTag = isPartiallyPaid || isOverdue;
+    const showPaidSoFar = isPartiallyPaid && paidFromTerms > 0;
+    summaryCardH = 8
+      + (showStatusTag ? 6 : 0)
+      + 7
+      + 9
+      + (showPaidSoFar ? 5 : 0)
+      + 5
+      + (previousBalanceDue > 0 ? 5 : 0)
+      + 6;
+    summaryCardH = Math.max(34, summaryCardH);
+
+    doc.setFillColor(248, 250, 252);
+    if (isOverdue) {
+      doc.setDrawColor(252, 165, 165);
+      doc.setLineWidth(0.35);
+    } else {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+    }
+    doc.roundedRect(rightBoxX, boxY, rightBoxW, summaryCardH, 2, 2, 'FD');
+
+    let cy = boxY + 6;
+    if (showStatusTag) {
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      if (isPartiallyPaid) {
+        doc.setTextColor(180, 83, 9);
+        doc.text('PARTIALLY PAID', rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+      } else {
+        doc.setTextColor(185, 28, 28);
+        doc.text('OVERDUE', rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+      }
+      cy += 6;
+    }
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(100, 116, 139);
+    const dueTitle = isPartiallyPaid ? 'AMOUNT DUE' : 'BALANCE DUE';
+    doc.text(dueTitle, rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+    cy += 7;
+    doc.setFontSize(14);
+    doc.setTextColor(5, 46, 22);
+    doc.text(`${CURRENCY} ${computedBalanceDue.toFixed(2)}`, rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+    cy += 9;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(71, 85, 105);
+    if (showPaidSoFar) {
+      doc.text(`Paid to date: ${CURRENCY} ${paidFromTerms.toFixed(2)}`, rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+      cy += 5;
+    }
+    doc.text(`Still due (this invoice): ${CURRENCY} ${currentOutstanding.toFixed(2)}`, rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+    cy += 5;
+    if (previousBalanceDue > 0) {
+      doc.text(`Previous balance: ${CURRENCY} ${previousBalanceDue.toFixed(2)}`, rightBoxX + rightBoxW / 2, cy, { align: 'center' });
+    }
   }
 
-  y = Math.max(y, boxY + boxH) + 8;
+  y = Math.max(y, boxY + summaryCardH) + 8;
 
   // ----- Line items table -----
   const colDesc = margin;
@@ -261,12 +325,14 @@ export async function generateInvoicePdf({
   y += 12;
 
   // ----- Totals (right-aligned, box) -----
-  const totalsBoxW = 56;
+  const totalsBoxW = 64;
   const totalsBoxX = colAmount - totalsBoxW;
   const totalsLabelX = totalsBoxX + 2;
   const totalsValueX = colAmount - 2;
+  /** Keep currency column clear of long labels (e.g. partial “total due” line at 11pt). */
+  const totalsAmountReserveMm = 30;
 
-  const totalsBlockHeight = 44 + (previousBalanceDue > 0 ? 8 : 0) + (paidFromTerms > 0 ? 8 : 0);
+  const totalsBlockHeight = 44 + (previousBalanceDue > 0 ? 8 : 0) + (paidFromTerms > 0 ? 8 : 0) - (settledNoBalanceDue ? 8 : 0);
   ensureSpace(totalsBlockHeight);
   doc.setFontSize(9);
   doc.setFont(undefined, 'normal');
@@ -287,18 +353,39 @@ export async function generateInvoicePdf({
     doc.text(`${CURRENCY} ${paidFromTerms.toFixed(2)}`, totalsValueX, y, { align: 'right' });
     y += 8;
   }
-  doc.text('Current Outstanding', totalsLabelX, y);
-  doc.text(`${CURRENCY} ${currentOutstanding.toFixed(2)}`, totalsValueX, y, { align: 'right' });
-  y += 8;
+  if (!settledNoBalanceDue) {
+    doc.text('Current Outstanding', totalsLabelX, y);
+    doc.text(`${CURRENCY} ${currentOutstanding.toFixed(2)}`, totalsValueX, y, { align: 'right' });
+    y += 8;
+  }
   doc.setDrawColor(203, 213, 225);
   doc.line(totalsBoxX, y, colAmount, y);
   y += 8;
   doc.setFont(undefined, 'bold');
   doc.setFontSize(11);
-  doc.setTextColor(5, 46, 22);
-  doc.text('Balance Due', totalsLabelX, y);
-  doc.text(`${CURRENCY} ${computedBalanceDue.toFixed(2)}`, totalsValueX, y, { align: 'right' });
-  y += 16;
+  let totalsFooterExtraY = 0;
+  if (settledNoBalanceDue) {
+    doc.setTextColor(21, 128, 61);
+    const paidFigure = Number(totals.total) || currentInvoiceTotal || 0;
+    const paidStr = `${CURRENCY} ${paidFigure.toFixed(2)}`;
+    const paidLabelMaxW = totalsValueX - totalsLabelX - totalsAmountReserveMm;
+    const paidLines = doc.splitTextToSize('Amount paid', Math.max(18, paidLabelMaxW));
+    doc.text(paidLines, totalsLabelX, y);
+    doc.text(paidStr, totalsValueX, y, { align: 'right' });
+    totalsFooterExtraY = paidLines.length > 1 ? (paidLines.length - 1) * 5 : 0;
+  } else {
+    const dueLabel = isPartiallyPaid ? 'Total due' : 'Balance due';
+    if (isOverdue) doc.setTextColor(185, 28, 28);
+    else if (isPartiallyPaid) doc.setTextColor(154, 52, 18);
+    else doc.setTextColor(5, 46, 22);
+    const dueStr = `${CURRENCY} ${computedBalanceDue.toFixed(2)}`;
+    const dueLabelMaxW = totalsValueX - totalsLabelX - totalsAmountReserveMm;
+    const dueLines = doc.splitTextToSize(dueLabel, Math.max(18, dueLabelMaxW));
+    doc.text(dueLines, totalsLabelX, y);
+    doc.text(dueStr, totalsValueX, y, { align: 'right' });
+    totalsFooterExtraY = dueLines.length > 1 ? (dueLines.length - 1) * 5 : 0;
+  }
+  y += 16 + totalsFooterExtraY;
 
   // ----- Payment Terms -----
   if (paymentTerms && paymentTerms.length > 0) {
