@@ -2207,23 +2207,23 @@ export default function AdminDashboard() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                          <div className="space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="space-y-2 min-w-0">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Issued</label>
                             <input
                               type="date"
                               value={invoiceDate}
                               onChange={(e) => setInvoiceDate(e.target.value)}
-                              className="w-full min-w-0 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
+                              className="w-full min-w-0 min-h-[48px] px-4 py-3 sm:min-h-0 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
                             />
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-2 min-w-0">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Due</label>
                             <input
                               type="date"
                               value={dueDate}
                               onChange={(e) => setDueDate(e.target.value)}
-                              className="w-full min-w-0 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
+                              className="w-full min-w-0 min-h-[48px] px-4 py-3 sm:min-h-0 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-medium text-slate-900 text-base"
                             />
                           </div>
                         </div>
@@ -3052,14 +3052,14 @@ export default function AdminDashboard() {
                           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Progress ({projectForm.progress}%)</label>
                           <input type="range" min={0} max={100} value={projectForm.progress} onChange={(e) => setProjectForm((p) => ({ ...p, progress: Number(e.target.value) }))} className="w-full accent-primary-600" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1.5 min-w-0">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Start Date</label>
-                            <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((p) => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium" />
+                            <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((p) => ({ ...p, startDate: e.target.value }))} className="w-full min-w-0 min-h-[48px] sm:min-h-0 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium text-base sm:text-sm" />
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1.5 min-w-0">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Due Date</label>
-                            <input type="date" value={projectForm.dueDate} onChange={(e) => setProjectForm((p) => ({ ...p, dueDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium" />
+                            <input type="date" value={projectForm.dueDate} onChange={(e) => setProjectForm((p) => ({ ...p, dueDate: e.target.value }))} className="w-full min-w-0 min-h-[48px] sm:min-h-0 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 outline-none text-slate-900 font-medium text-base sm:text-sm" />
                           </div>
                         </div>
                         {/* Milestones */}

@@ -62,7 +62,7 @@ for (const s of services) {
   addLine(`• ${s}`, 10, 13);
 }
 y += 6;
-addLine('For detailed pricing and scope, visit rastogicodeworks.com/pricing or contact us for a tailored quote.', 10, 13);
+addLine('For detailed pricing and scope, visit rastogicodeworks.com/services or contact us for a tailored quote.', 10, 13);
 
 fs.writeFileSync(out, Buffer.from(doc.output('arraybuffer')));
 console.log('Wrote', out);

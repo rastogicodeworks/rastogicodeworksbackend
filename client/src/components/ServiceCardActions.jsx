@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, IndianRupee } from 'lucide-react';
 
 /**
- * Shared CTA row: service detail page + pricing anchor.
+ * Shared CTA row: service detail + in-page packages anchor.
  * @param {string} [className] - Wrapper classes; default `mt-auto` for flex footers (e.g. Services page).
  */
 export default function ServiceCardActions({ serviceId, variant = 'compact', className }) {
@@ -22,13 +22,13 @@ export default function ServiceCardActions({ serviceId, variant = 'compact', cla
         <ArrowRight className="w-4 h-4 shrink-0" />
       </Link>
       <Link
-        to={`/pricing#pricing-${serviceId}`}
+        to={`/services/${serviceId}#packages`}
         className={`inline-flex items-center justify-center gap-2 flex-1 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-semibold hover:border-primary-200 hover:bg-primary-50 hover:text-primary-800 transition-all duration-300 ${
           isLarge ? 'py-3 text-base' : 'py-2.5 text-sm'
         }`}
       >
         <IndianRupee className="w-4 h-4 shrink-0" aria-hidden />
-        Pricing
+        Packages
       </Link>
     </div>
   );

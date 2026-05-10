@@ -9,6 +9,7 @@ import {
   IndianRupee,
   ListChecks,
   Info,
+  Package,
 } from 'lucide-react';
 import { services } from '../data/services';
 import PageCTA from '../components/PageCTA';
@@ -24,7 +25,6 @@ export default function ServiceDetail() {
     if (!service) {
       navigate('/services');
     }
-    window.scrollTo(0, 0);
   }, [id, service, navigate]);
 
   if (!service) return null;
@@ -81,10 +81,10 @@ export default function ServiceDetail() {
                 <ArrowRight className="w-5 h-5 shrink-0" />
               </Link>
               <a
-                href="#pricing"
+                href="#packages"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-xl border-2 border-white/30 text-white font-semibold hover:bg-white/10 transition-all duration-300 min-h-[56px]"
               >
-                Pricing details
+                Packages
               </a>
               <a
                 href="#process"
@@ -156,6 +156,18 @@ export default function ServiceDetail() {
                 All amounts are <strong className="font-semibold text-slate-800">indicative in INR, excluding taxes</strong>.
                 Your final proposal lists deliverables, milestones, and payment terms after we align on scope.
               </p>
+              {Array.isArray(service.pricing.packages) && service.pricing.packages.length > 0 && (
+                <p className="mt-6">
+                  <a
+                    href="#packages"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800 underline-offset-4 hover:underline"
+                  >
+                    View fixed packages for this service
+                    <ArrowRight className="w-4 h-4" aria-hidden />
+                  </a>
+                  <span className="text-slate-500 font-normal"> — listed after the tech stack below.</span>
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
@@ -166,10 +178,28 @@ export default function ServiceDetail() {
                       {service.pricing.model}
                     </p>
                   )}
-                  <p className="text-sm font-semibold text-slate-500 mb-1">Starting at</p>
-                  <p className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4">
-                    {service.pricing.headline}
-                  </p>
+                  {Array.isArray(service.pricing.packages) && service.pricing.packages.length > 0 ? (
+                    <>
+                      <p className="text-sm font-semibold text-slate-500 mb-1">Entry tier from</p>
+                      <p className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-4">
+                        {service.pricing.headline}
+                      </p>
+                      <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                        Fixed tiers for this service are in the <strong className="font-semibold text-slate-700">Packages</strong> section after our tech stack—or{' '}
+                        <a href="#packages" className="font-semibold text-primary-700 hover:underline underline-offset-2">
+                          jump there
+                        </a>
+                        . Your proposal may combine add-ons across tiers.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-slate-500 mb-1">Starting at</p>
+                      <p className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4">
+                        {service.pricing.headline}
+                      </p>
+                    </>
+                  )}
                   <p className="text-slate-600 leading-relaxed mb-6">{service.pricing.note}</p>
                   {service.pricing.summary && (
                     <p className="text-slate-700 text-base leading-relaxed border-t border-slate-100 pt-6">
@@ -185,10 +215,10 @@ export default function ServiceDetail() {
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                     <Link
-                      to="/pricing"
+                      to="/services"
                       className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-slate-200 text-slate-800 font-semibold hover:border-primary-200 hover:bg-primary-50/50 transition-colors"
                     >
-                      All services pricing
+                      All services
                     </Link>
                   </div>
                 </div>
@@ -300,6 +330,128 @@ export default function ServiceDetail() {
           </div>
         </div>
       </section>
+
+      {/* Fixed packages — modern tier cards (only when service defines pricing.packages) */}
+      {Array.isArray(service.pricing?.packages) && service.pricing.packages.length > 0 && (
+        <section
+          id="packages"
+          className="relative scroll-mt-28 py-20 md:py-28 overflow-hidden border-y border-slate-200/70 bg-gradient-to-b from-slate-100/50 via-white to-primary-50/35"
+        >
+          <div className="pointer-events-none absolute inset-0" aria-hidden>
+            <div className="absolute -top-24 right-0 h-[420px] w-[420px] rounded-full bg-primary-400/15 blur-3xl" />
+            <div className="absolute bottom-0 left-0 h-[360px] w-[360px] rounded-full bg-teal-400/10 blur-3xl" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.04)_1px,transparent_1px)] bg-[size:48px_48px] opacity-40" />
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12 md:mb-16">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary-200/80 bg-white/90 px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-700 shadow-sm shadow-primary-900/5 mb-5">
+                  <Package className="h-4 w-4" aria-hidden />
+                  Packages
+                </div>
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight mb-4">
+                  If you want tiers like these—we&apos;ve defined them clearly
+                </h2>
+                <p className="text-lg text-slate-600 leading-relaxed">
+                  Three ready-made entry points. Pick the closest fit; we refine features and integrations on a short call so your quote matches reality.{' '}
+                  <span className="font-medium text-slate-800">All figures indicative, excl. taxes.</span>
+                </p>
+              </div>
+              <Link
+                to="/contact"
+                className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-2xl border-2 border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition-all hover:border-primary-200 hover:bg-primary-50/50 lg:self-auto"
+              >
+                Custom scope instead
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-5 xl:gap-8 md:items-stretch">
+              {service.pricing.packages.map((pkg, index) => {
+                const featured = index === 1;
+                return (
+                  <div
+                    key={pkg.id}
+                    className={`relative flex flex-col h-full min-h-0 rounded-3xl border bg-white transition-all duration-300 ${
+                      featured
+                        ? 'border-primary-300 shadow-2xl shadow-primary-900/10 ring-2 ring-primary-500/25 md:scale-[1.03] md:z-10 md:-my-1'
+                        : 'border-slate-200/90 shadow-lg shadow-slate-900/5 hover:border-primary-200/80 hover:shadow-xl'
+                    }`}
+                  >
+                    {featured && (
+                      <div className="absolute -top-3 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-primary-600 via-primary-500 to-teal-600 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-primary-600/30">
+                        Most popular
+                      </div>
+                    )}
+
+                    <div
+                      className={`rounded-t-3xl px-8 pt-10 pb-6 ${featured ? 'bg-gradient-to-br from-primary-600 to-primary-800 text-white' : 'bg-slate-50/90 border-b border-slate-100'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <span
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${
+                            featured ? 'bg-white/20 text-white' : 'bg-white text-primary-700 shadow-sm ring-1 ring-slate-200/80'
+                          }`}
+                        >
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        {featured ? (
+                          <IndianRupee className="h-6 w-6 text-primary-200 opacity-90" aria-hidden />
+                        ) : (
+                          <IndianRupee className="h-6 w-6 text-primary-500/80" aria-hidden />
+                        )}
+                      </div>
+                      <p
+                        className={`text-[11px] font-bold uppercase tracking-[0.2em] mb-2 ${featured ? 'text-primary-100' : 'text-primary-600'}`}
+                      >
+                        {pkg.name}
+                      </p>
+                      <p className={`text-3xl md:text-4xl font-bold tracking-tight ${featured ? 'text-white' : 'text-slate-900'}`}>
+                        {pkg.headline}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-1 flex-col px-8 pb-8 pt-6">
+                      {pkg.tagline && (
+                        <p className="text-sm leading-relaxed text-slate-600 mb-6 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
+                          {pkg.tagline}
+                        </p>
+                      )}
+
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">What you get</p>
+                      <ul className="space-y-3 flex-1">
+                        {pkg.bullets.map((line, i) => (
+                          <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-700">
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+                              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                            </span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mt-8 pt-6 border-t border-slate-100">
+                        <Link
+                          to={`/contact?serviceId=${encodeURIComponent(service.id)}&packageId=${encodeURIComponent(pkg.id)}#contact-form`}
+                          className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold transition-all ${
+                            featured
+                              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 hover:bg-primary-700'
+                              : 'bg-slate-900 text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          Request this package
+                          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Process  -  timeline / steps */}
       <section id="process" className="py-20 md:py-28 bg-slate-50/80 border-t border-slate-100">

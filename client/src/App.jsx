@@ -6,8 +6,6 @@ import About from './pages/About';
 import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import Contact from './pages/Contact';
-import Compare from './pages/Compare';
-import Pricing from './pages/Pricing';
 import Clients from './pages/Clients';
 import Login from './pages/Login';
 import ClientDashboard from './pages/ClientDashboard';
@@ -65,8 +63,8 @@ function App() {
         <Route path="about" element={<About />} />
         <Route path="services" element={<Services />} />
         <Route path="services/:id" element={<ServiceDetail />} />
-        <Route path="compare" element={<Compare />} />
-        <Route path="pricing" element={<Pricing />} />
+        <Route path="pricing" element={<Navigate to="/services" replace />} />
+        <Route path="compare" element={<Navigate to="/services" replace />} />
         <Route path="clients" element={<Clients />} />
         <Route path="contact" element={<Contact />} />
         <Route path="login" element={<Login />} />

@@ -31,6 +31,29 @@ const reasons = [
   }
 ];
 
+const techMarqueeItems = [
+  'React',
+  'Node.js',
+  'Next.js',
+  'TypeScript',
+  'Python',
+  'AWS',
+  'Docker',
+  'GraphQL',
+  'Tailwind',
+  'MongoDB',
+  'Express',
+  'Vite',
+  'React Native',
+  'Flutter',
+  'PostgreSQL',
+  'Redis',
+  'Kubernetes',
+  'Terraform',
+  'GitHub Actions',
+  'REST APIs',
+];
+
 const faqs = [
   {
     question: "How do you estimate project costs?",
@@ -221,12 +244,12 @@ export default function Services() {
         </div>
         <div className="relative flex overflow-x-hidden group">
           <div className="animate-marquee whitespace-nowrap flex items-center gap-16 px-8">
-            {['React', 'Node.js', 'Next.js', 'TypeScript', 'Python', 'AWS', 'Docker', 'GraphQL', 'Tailwind', 'MongoDB'].map((tech, i) => (
+            {techMarqueeItems.map((tech, i) => (
               <span key={i} className="text-2xl md:text-3xl font-bold text-slate-300 hover:text-primary-400 transition-colors duration-300 cursor-default">
                 {tech}
               </span>
             ))}
-             {['React', 'Node.js', 'Next.js', 'TypeScript', 'Python', 'AWS', 'Docker', 'GraphQL', 'Tailwind', 'MongoDB'].map((tech, i) => (
+            {techMarqueeItems.map((tech, i) => (
               <span key={`dup-${i}`} className="text-2xl md:text-3xl font-bold text-slate-300 hover:text-primary-400 transition-colors duration-300 cursor-default">
                 {tech}
               </span>

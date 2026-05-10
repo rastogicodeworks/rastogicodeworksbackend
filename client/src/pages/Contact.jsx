@@ -1,9 +1,89 @@
-import { useState } from 'react';
-import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Linkedin, CheckCircle, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef, cloneElement } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  MessageCircle,
+  Linkedin,
+  CheckCircle,
+  ArrowRight,
+  ChevronDown,
+  Layers,
+  IndianRupee,
+} from 'lucide-react';
 import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 import { FORMSPREE_CONTACT_URL } from '../config/formspree';
 import { services } from '../data/services';
+
+const OTHER_SERVICE_LABEL = 'Other / multiple services';
+
+/** Subject + message when user picks a service (or lands without a specific package). */
+function getContactDraftForService(serviceTitle) {
+  if (!serviceTitle || serviceTitle === OTHER_SERVICE_LABEL) {
+    return {
+      subject: 'Project enquiry — multiple or custom scope',
+      message: [
+        "I'm looking for help across more than one area, or something that doesn't fit a single service on your site.",
+        '',
+        'Details to help you respond:',
+        '• Outcomes or problems we want solved:',
+        '• Timeline or launch targets:',
+        '• Rough budget or constraints (optional):',
+        '• Existing systems, teams, or vendors:',
+        '',
+        "Happy to jump on a short call to narrow scope.",
+        '',
+      ].join('\n'),
+    };
+  }
+
+  const s = services.find((x) => x.title === serviceTitle);
+  if (!s) {
+    return {
+      subject: `Enquiry: ${serviceTitle}`,
+      message: `I'd like to discuss ${serviceTitle}.\n\nPlease suggest next steps.\n`,
+    };
+  }
+
+  const lines = [`I'm interested in ${s.title}.`, ''];
+
+  if (s.pricing?.headline) {
+    lines.push(`Indicative starting point: ${s.pricing.headline} (excl. taxes).`);
+    lines.push('');
+  }
+
+  if (s.shortDesc) {
+    lines.push(`Brief context: ${s.shortDesc}`);
+    lines.push('');
+  }
+
+  if (Array.isArray(s.pricing?.packages) && s.pricing.packages.length > 0) {
+    lines.push('Package options (from your site):');
+    s.pricing.packages.forEach((p) => {
+      lines.push(`• ${p.name} — ${p.headline}`);
+    });
+    lines.push('');
+    lines.push('Which tier is closest—or should we blend scopes?');
+    lines.push('');
+  }
+
+  lines.push('More about our needs:');
+  lines.push('• Goals and success criteria:');
+  lines.push('• Timeline:');
+  lines.push('• Users, locations, integrations, or compliance:');
+  lines.push('');
+  lines.push('Please reply with next steps or questions before a formal quote.');
+  lines.push('');
+
+  return {
+    subject: `Project enquiry: ${s.title}`,
+    message: lines.join('\n'),
+  };
+}
 
 const emailSubject = 'Enquiry from your website';
 const emailBody = `Hey,
@@ -58,6 +138,11 @@ function WhatsAppIcon({ className }) {
 }
 
 export default function Contact() {
+  const [searchParams] = useSearchParams();
+  const formAnchorRef = useRef(null);
+  const servicePickerRef = useRef(null);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const [prefillBanner, setPrefillBanner] = useState(false);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -69,6 +154,64 @@ export default function Contact() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const serviceId = searchParams.get('serviceId')?.trim();
+    const packageId = searchParams.get('packageId')?.trim();
+    if (!serviceId) return;
+
+    const svc = services.find((s) => s.id === serviceId);
+    if (!svc) return;
+
+    let subject;
+    let message;
+    if (packageId && Array.isArray(svc.pricing?.packages)) {
+      const pkg = svc.pricing.packages.find((p) => p.id === packageId);
+      if (pkg) {
+        subject = `Quote request: ${pkg.name} — ${pkg.headline}`;
+        message = `I'm interested in the "${pkg.name}" package under ${svc.title}.\n\n`;
+        message += `Indicative range: ${pkg.headline}.\n\n`;
+        if (pkg.tagline) message += `${pkg.tagline}\n\n`;
+        message +=
+          'Please confirm scope, timeline, and anything you need from my side to prepare a formal quote.\n';
+      } else {
+        ({ subject, message } = getContactDraftForService(svc.title));
+      }
+    } else {
+      ({ subject, message } = getContactDraftForService(svc.title));
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      service: svc.title,
+      subject,
+      message,
+    }));
+    setPrefillBanner(true);
+
+    const t = window.setTimeout(() => {
+      formAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!servicePickerOpen) return;
+    const onDocMouseDown = (e) => {
+      if (servicePickerRef.current && !servicePickerRef.current.contains(e.target)) {
+        setServicePickerOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setServicePickerOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [servicePickerOpen]);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -76,6 +219,11 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
+    if (!form.service?.trim()) {
+      setStatus({ type: 'error', message: 'Please choose a service.' });
+      setServicePickerOpen(true);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(FORMSPREE_CONTACT_URL, {
@@ -87,6 +235,8 @@ export default function Contact() {
       if (res.ok && data.ok !== false) {
         setStatus({ type: 'success', message: 'Thank you! We will get back to you soon.' });
         setForm({ name: '', email: '', phone: '', service: '', subject: '', message: '' });
+        setPrefillBanner(false);
+        setServicePickerOpen(false);
       } else {
         setStatus({ type: 'error', message: data.error || 'Something went wrong. Please try again.' });
       }
@@ -196,10 +346,19 @@ export default function Contact() {
             </div>
 
             {/* Right  -  form */}
-            <div id="contact-form" className="lg:col-span-7 scroll-mt-24">
+            <div ref={formAnchorRef} id="contact-form" className="lg:col-span-7 scroll-mt-24">
               <div className="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/30 p-8 md:p-10 lg:p-12">
                 <h3 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Send us a message</h3>
                 <p className="text-slate-600 mb-8">Fill in the form below and we&apos;ll get back to you soon.</p>
+
+                {prefillBanner && (
+                  <div className="mb-6 flex gap-3 rounded-xl border border-primary-100 bg-primary-50/80 px-4 py-3 text-sm text-primary-900">
+                    <CheckCircle className="w-5 h-5 shrink-0 text-primary-600 mt-0.5" aria-hidden />
+                    <p className="leading-relaxed">
+                      <span className="font-semibold">Package details added.</span> Review the service, subject, and message below—you can edit anything before sending.
+                    </p>
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -243,26 +402,162 @@ export default function Contact() {
                         placeholder="+1 (555) 000-0000"
                       />
                     </div>
-                    <div>
-                      <label htmlFor="service" className="block text-sm font-semibold text-slate-700 mb-2">Service *</label>
-                      <select
-                        id="service"
-                        name="service"
-                        required
-                        value={form.service}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white outline-none transition text-slate-900 cursor-pointer"
-                      >
-                        <option value="" disabled>
-                          Select a service
-                        </option>
-                        {services.map((s) => (
-                          <option key={s.id} value={s.title}>
-                            {s.title}
-                          </option>
-                        ))}
-                        <option value="Other / multiple services">Other / multiple services</option>
-                      </select>
+                    <div className="sm:col-span-2">
+                      <span id="service-label" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Service *
+                      </span>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Pick the closest match—we&apos;ll confirm scope on reply. Starting prices are indicative (excl. taxes).
+                      </p>
+                      <div ref={servicePickerRef} className="relative">
+                        <button
+                          type="button"
+                          id="service"
+                          aria-labelledby="service-label"
+                          aria-expanded={servicePickerOpen}
+                          aria-haspopup="listbox"
+                          onClick={() => setServicePickerOpen((o) => !o)}
+                          className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all ${
+                            form.service
+                              ? 'border-primary-200 bg-white shadow-sm shadow-primary-900/5'
+                              : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+                          } ${servicePickerOpen ? 'ring-2 ring-primary-500/30 border-primary-300' : ''}`}
+                        >
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                            {form.service && form.service !== OTHER_SERVICE_LABEL ? (
+                              (() => {
+                                const sel = services.find((s) => s.title === form.service);
+                                return sel
+                                  ? cloneElement(sel.icon, { className: 'w-6 h-6' })
+                                  : <Layers className="w-6 h-6" aria-hidden />;
+                              })()
+                            ) : form.service === OTHER_SERVICE_LABEL ? (
+                              <Layers className="w-6 h-6" aria-hidden />
+                            ) : (
+                              <Layers className="w-6 h-6 text-slate-400" aria-hidden />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className={`block text-sm font-bold ${form.service ? 'text-slate-900' : 'text-slate-400'}`}>
+                              {form.service || 'Choose a service'}
+                            </span>
+                            {form.service && form.service !== OTHER_SERVICE_LABEL && (
+                              (() => {
+                                const sel = services.find((s) => s.title === form.service);
+                                const h = sel?.pricing?.headline;
+                                return h ? (
+                                  <span className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-primary-700">
+                                    <IndianRupee className="h-3 w-3" aria-hidden />
+                                    {h}
+                                  </span>
+                                ) : null;
+                              })()
+                            )}
+                          </div>
+                          <ChevronDown
+                            className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${servicePickerOpen ? 'rotate-180' : ''}`}
+                            aria-hidden
+                          />
+                        </button>
+
+                        {servicePickerOpen && (
+                          <div
+                            role="listbox"
+                            aria-labelledby="service-label"
+                            className="absolute left-0 right-0 z-50 mt-2 max-h-[min(70vh,560px)] overflow-y-auto rounded-2xl border border-slate-200/90 bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-slate-900/5"
+                          >
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {services.map((s) => {
+                                const selected = form.service === s.title;
+                                return (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={selected}
+                                    onClick={() => {
+                                      const draft = getContactDraftForService(s.title);
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        service: s.title,
+                                        subject: draft.subject,
+                                        message: draft.message,
+                                      }));
+                                      setServicePickerOpen(false);
+                                    }}
+                                    className={`flex gap-3 rounded-xl border p-3 text-left transition-all sm:p-3.5 ${
+                                      selected
+                                        ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-white ring-2 ring-primary-500/25'
+                                        : 'border-slate-100 bg-slate-50/40 hover:border-primary-200 hover:bg-white hover:shadow-md'
+                                    }`}
+                                  >
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary-600 shadow-sm ring-1 ring-slate-100">
+                                      {cloneElement(s.icon, { className: 'w-5 h-5' })}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <span className="block text-sm font-bold leading-snug text-slate-900">{s.title}</span>
+                                      {s.pricing?.headline && (
+                                        <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary-600">
+                                          <IndianRupee className="h-3 w-3 shrink-0" aria-hidden />
+                                          {s.pricing.headline}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {selected && (
+                                      <CheckCircle className="h-5 w-5 shrink-0 text-primary-600" aria-hidden />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={form.service === OTHER_SERVICE_LABEL}
+                                onClick={() => {
+                                  const draft = getContactDraftForService(OTHER_SERVICE_LABEL);
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    service: OTHER_SERVICE_LABEL,
+                                    subject: draft.subject,
+                                    message: draft.message,
+                                  }));
+                                  setServicePickerOpen(false);
+                                }}
+                                className={`flex gap-3 rounded-xl border p-3 text-left transition-all sm:col-span-2 sm:p-3.5 ${
+                                  form.service === OTHER_SERVICE_LABEL
+                                    ? 'border-slate-700 bg-slate-900 text-white ring-2 ring-slate-400/40'
+                                    : 'border-dashed border-slate-200 bg-white hover:border-primary-300 hover:bg-primary-50/30'
+                                }`}
+                              >
+                                <div
+                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                    form.service === OTHER_SERVICE_LABEL
+                                      ? 'bg-white/15 text-white'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  <Layers className="w-5 h-5" aria-hidden />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span
+                                    className={`block text-sm font-bold ${form.service === OTHER_SERVICE_LABEL ? 'text-white' : 'text-slate-900'}`}
+                                  >
+                                    {OTHER_SERVICE_LABEL}
+                                  </span>
+                                  <span
+                                    className={`mt-0.5 block text-xs ${form.service === OTHER_SERVICE_LABEL ? 'text-primary-100' : 'text-slate-500'}`}
+                                  >
+                                    Multiple offerings, RFP, or something not listed—describe in your message.
+                                  </span>
+                                </div>
+                                {form.service === OTHER_SERVICE_LABEL && (
+                                  <CheckCircle className="h-5 w-5 shrink-0 text-primary-300" aria-hidden />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -299,7 +594,7 @@ export default function Contact() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 rounded-xl font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                    className="w-full py-4 rounded-xl font-bold text-primary-950 bg-primary-200 border-2 border-primary-300/90 hover:bg-primary-300 hover:border-primary-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 shadow-md shadow-primary-900/10 hover:shadow-lg hover:shadow-primary-600/15 hover:-translate-y-0.5 flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>Sending...</>

@@ -17,6 +17,8 @@ const logos = [
   'Rhine Advisory',
   'Sintora Ventures',
   'Onx Studio',
+  'Dwivedi Gupta & Co.',
+  'Vimaanna - DGCA',
   'Many More Startups…',
 ];
 
@@ -96,17 +98,6 @@ const services = [
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    )
-  },
-  {
-    id: 'consulting-strategy',
-    title: 'Consulting & Strategy',
-    desc: 'Technology and digital strategy advice to align your roadmap with business goals and market opportunities.',
-    span: 'md:col-span-1',
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
       </svg>
     )
   }
@@ -269,14 +260,13 @@ export default function Home() {
                 <span className="whitespace-pre-line text-white">{cmsHeadline}</span>
               ) : (
                 <>
-                  <span className="text-white">Turn </span>
-                  <span className={heroHeadlineAccent}>visitors</span>
-                  <span className="text-white"> into </span>
-                  <span className={heroHeadlineAccent}>customers</span>
-                  <br />
-                  <span className="text-white">with </span>
-                  <span className={`whitespace-nowrap ${heroHeadlineAccent}`}>AI-powered</span>
-                  <span className="text-white"> websites.</span>
+                  <span className="text-white">Build </span>
+                  <span className={heroHeadlineAccent}>Faster.</span>
+                  <span className="text-white"> Automate </span>
+                  <span className={heroHeadlineAccent}>Smarter.</span>{' '}
+                  <br className="md:hidden" aria-hidden />
+                  <span className="text-white">Scale </span>
+                  <span className={heroHeadlineAccent}>Better.</span>
                 </>
               )}
             </h1>
@@ -286,7 +276,7 @@ export default function Home() {
               style={{ animationDelay: '140ms' }}
             >
               {cmsSubtext ||
-                'Fast, mobile-ready pages with clear copy and forms—launched on your domain with help at every step, not just a handoff file.'}
+                'Custom SaaS platforms, enterprise dashboards, mobile apps, and AI workflows designed for growing businesses.'}
             </p>
 
             {/* Trust facts — single line on mobile; glass pill from sm */}
@@ -326,10 +316,10 @@ export default function Home() {
                 <ArrowRight className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 min-[400px]:h-5 min-[400px]:w-5 sm:h-5 sm:w-5" />
               </Link>
               <Link
-                to="/pricing"
+                to="/services"
                 className="inline-flex min-h-[3.25rem] min-w-0 flex-1 items-center justify-center rounded-2xl border-2 border-white/70 bg-white/[0.12] px-3 text-sm font-semibold text-white shadow-lg shadow-black/15 backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 active:scale-[0.98] hover:border-white hover:bg-white/25 hover:backdrop-blur-2xl min-[400px]:px-4 min-[400px]:text-base sm:min-h-0 sm:h-[3.25rem] sm:flex-initial sm:rounded-xl sm:border sm:px-8 sm:text-[15px] sm:w-auto sm:min-w-[200px]"
               >
-                View pricing
+                View services
               </Link>
             </div>
           </div>
@@ -425,7 +415,7 @@ export default function Home() {
             </div>
           </div>
           </AnimateOnScroll>
-          {/* Row 3: All three last services in one row */}
+          {/* Row 3: Remaining service cards */}
           <AnimateOnScroll variant="up" delay={160}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {services.slice(4).map((service) => (

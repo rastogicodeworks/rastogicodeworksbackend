@@ -65,10 +65,10 @@ export default function About() {
               </h2>
               <div className="space-y-6 text-lg text-slate-600 leading-relaxed">
                 <p>
-                  Rastogi Codeworks builds custom software and digital solutions that scale with your business. From web and mobile apps to cloud infrastructure and automation, we turn complex requirements into clear, reliable products - so you ship faster and your users get experiences that convert.
+                  Rastogi Codeworks designs and builds custom SaaS platforms, enterprise dashboards, mobile apps, and AI workflows for teams that are outgrowing spreadsheets and one-size-fits-all tools. From greenfield products to serious internal systems, we turn complex requirements into clear, dependable software—so you ship faster, automate smarter, and give your users experiences that convert.
                 </p>
                 <p>
-                  We work as an extension of your team: we align on your goals, your users, and your timelines. That partnership - backed by modern tech, security best practices, and transparent communication - is how we deliver software that performs in the real world and supports long-term growth.
+                  We work as an extension of your team: shared goals, realistic timelines, and trade-offs explained in plain language. That partnership—modern architecture, security-conscious delivery, and direct communication—is how we deliver software that performs in production and supports long-term growth.
                 </p>
               </div>
               

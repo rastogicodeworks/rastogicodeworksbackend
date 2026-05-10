@@ -12,10 +12,48 @@ export const services = [
     icon: <Building2 className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹35,000',
-      note: 'Discovery workshop, tooling plan, and rollout roadmap. Larger programs quoted after scope.',
+      note: 'Three engagement levels below. Larger rollouts and embedded support are quoted after scope. All figures indicative, excl. taxes.',
       model: 'Project-based · phased milestones',
       summary:
-        'Most engagements start with a compact discovery and design phase so leadership gets clarity before a wider rollout. We then quote implementation separately if you want hands-on execution across teams.',
+        'Start with a focused discovery sprint, move to a deeper operating design, or engage us for an extended transformation programme—each tier has clear outputs; we confirm timelines and investment on a short call.',
+      packages: [
+        {
+          id: 'org-discovery',
+          name: 'Discovery & blueprint',
+          headline: 'From ₹35,000',
+          tagline: 'Compact sprint: stakeholders, constraints, tooling direction, and a written roadmap you can run with.',
+          bullets: [
+            'Facilitated sessions and constraints review for one business unit or initiative',
+            'Technology and tooling recommendations sized to your current scale',
+            'Process outline: roles, handoffs, and basics of governance',
+            'Written roadmap, next-step checklist, and one Q&A handover',
+          ],
+        },
+        {
+          id: 'org-operating-model',
+          name: 'Operating model design',
+          headline: 'From ₹75,000',
+          tagline: 'Deeper design across teams—workflows, tool shortlists, and rollout sequencing.',
+          bullets: [
+            'Multi-stakeholder workshops and artifact review',
+            'Detailed workflow and tooling plan with adoption milestones',
+            'RACI-style clarity on roles and decision rights where needed',
+            'Executive-ready summary and phased implementation outline',
+          ],
+        },
+        {
+          id: 'org-transformation',
+          name: 'Programme & transformation',
+          headline: 'From ₹1,50,000',
+          tagline: 'Larger change efforts—multi-department rollout, PM cadence, and hands-on support blocks (scoped with you).',
+          bullets: [
+            'Discovery-led programme charter and dependency map',
+            'Phased rollout plan with success metrics and governance touchpoints',
+            'Optional embedded working sessions beyond documentation—hours in proposal',
+            'Final investment and duration agreed before kickoff',
+          ],
+        },
+      ],
       included: [
         'Stakeholder discovery sessions and constraints review',
         'Technology and tooling recommendations aligned to your scale',
@@ -49,20 +87,58 @@ export const services = [
     fullDesc: 'We build software that works. From responsive web apps to native and cross-platform mobile applications, we use proven technologies and agile practices to deliver on time and within budget.',
     icon: <Code className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹1,00,000',
-      note: 'Typical MVPs and focused product builds. Enterprise and multi-platform apps scoped separately.',
+      headline: 'From ₹50,000',
+      note: 'ERP-style systems below are common starting points. Other web and mobile products are scoped separately. All figures indicative, excl. taxes.',
       model: 'Fixed phases, milestone billing, or retainer',
       summary:
-        'Starting at one lakh INR covers a scoped web product or a single-platform app with a clear feature set. We break work into milestones (design, build, hardening, launch) so you see progress before each payment.',
+        'We deliver internal tools and ERP-style products in clear tiers: a basic-to-mid ERP entry from fifty thousand rupees, a mid-level ERP from one lakh, and custom ERP from two lakhs upward—with final scope, integrations, and milestones agreed after a short discovery call.',
+      packages: [
+        {
+          id: 'erp-basic-mid',
+          name: 'Basic to mid ERP',
+          headline: 'From ₹50,000',
+          tagline: 'Normal ERP coverage for small teams—core modules, straightforward workflows, limited integrations.',
+          bullets: [
+            'Scoped modules (e.g. masters, transactions, basic reports) agreed in the statement of work',
+            'Single deployment target and standard roles/permissions for your team size',
+            'Straightforward integrations only where listed in scope; heavier connectors quoted separately',
+            'Milestone billing so you approve each phase before the next commitment',
+          ],
+        },
+        {
+          id: 'erp-mid',
+          name: 'Mid-level ERP',
+          headline: 'From ₹1,00,000',
+          tagline: 'Broader operational coverage—more modules, reporting, and workflow depth than the entry tier.',
+          bullets: [
+            'Expanded modules, approvals, and reporting tailored to your operating model',
+            'Room for more users, branches, or business rules within the agreed backlog',
+            'API and integration points explicitly named in the proposal',
+            'Hardening and UAT window as defined before go-live',
+          ],
+        },
+        {
+          id: 'erp-custom',
+          name: 'Custom ERP',
+          headline: 'From ₹2,00,000',
+          tagline: 'Large or specialised builds—multi-entity, deep integrations, compliance, or heavy custom logic. Final investment is discussion-based.',
+          bullets: [
+            'Discovery-led scope: we map entities, integrations, and non-negotiable workflows before quoting',
+            'Starting point typically from two lakh rupees; complex programmes priced in phases',
+            'Optional retainers for rollout, training, and post-go-live evolution',
+            'Everything in writing: deliverables, timelines, and change process before kickoff',
+          ],
+        },
+      ],
       included: [
-        'Requirements workshop and backlog for the agreed scope',
+        'Requirements workshop and backlog for the agreed tier and scope',
         'UI implementation for screens in scope (design may be separate or bundled)',
         'APIs and integrations explicitly listed in the statement of work',
         'Tested build deployed to your hosting or ours for go-live',
         'Post-launch stabilization window as agreed in the proposal',
       ],
       extras: [
-        'Second mobile codebase, heavy third-party integrations, compliance-heavy sectors, and 24/7 operations are priced after technical discovery.',
+        'Second mobile codebase, rare compliance regimes, 24/7 operations, and open-ended change streams are scoped after technical discovery.',
       ],
     },
     features: [
@@ -90,20 +166,56 @@ export const services = [
     icon: <Globe className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹15,000',
-      note: 'Normal static sites through dynamic builds. E-commerce, member portals, and app-style products quoted separately.',
+      note: 'Three packages below. Domain, hosting, and third-party fees are excluded unless your proposal says otherwise. Long-term help is available at minimal charges—ask us for a support pack.',
       model: 'Fixed-scope project · milestone billing',
       summary:
-        'Starting pricing covers straightforward sites from normal marketing pages up to dynamic layouts: agreed page count, responsive implementation, and go-live on your domain. Add-ons like custom illustrations, large content migration, or complex integrations are quoted after a short brief so the scope stays predictable.',
+        'We scope each build after a short brief so pages, features, and integrations match your budget. Standard marketing sites start at fifteen thousand rupees; dynamic and advanced sites from twenty-five thousand; e‑commerce and high‑complexity sites from forty thousand—with exact deliverables confirmed before you pay milestones.',
+      packages: [
+        {
+          id: 'website-standard',
+          name: 'Normal full website',
+          headline: 'From ₹15,000',
+          tagline: 'Full website without domain & hosting in the base price—those are billed separately or as add-ons as per your needs.',
+          bullets: [
+            'Complete site build aligned to your requirements (pages, sections, and CTAs agreed up front)',
+            'Domain registration and hosting not included; we guide purchase and connect everything at go-live',
+            'Responsive, mobile-first layout and performance-conscious implementation for the agreed scope',
+            'Long-term support for updates, fixes, and questions—minimal charges per request or small retainer',
+          ],
+        },
+        {
+          id: 'website-dynamic',
+          name: 'Dynamic & advanced dynamic',
+          headline: 'From ₹25,000',
+          tagline: 'Interactive pages, CMS-friendly sections, and richer behaviour—features and integrations defined in your proposal.',
+          bullets: [
+            'Dynamic layouts, editable content areas, blogs, directories, or similar—scoped to your feature list',
+            'Advanced dynamic builds (portals, dashboards, deeper integrations) priced after discovery',
+            'Milestone billing so you approve scope before major build phases',
+          ],
+        },
+        {
+          id: 'website-ecommerce',
+          name: 'E‑commerce & high‑level websites',
+          headline: 'From ₹40,000',
+          tagline: 'Online stores, booking engines, and complex marketing or catalogue sites—let’s discuss scope and timeline.',
+          bullets: [
+            'Product catalogues, checkout flows, payments, and operational workflows quoted to match your catalogue size',
+            'High‑level corporate or campaign sites with heavy content, animation, or integrations',
+            'Final pricing and milestones agreed with you on a call after we understand products, traffic, and ops',
+          ],
+        },
+      ],
       included: [
-        'Kickoff brief to lock pages, sections, and must-have features',
-        'Responsive implementation for the agreed page set',
-        'Contact or lead form (or equivalent CTA) as scoped',
-        'Deployment to agreed hosting or our recommended setup',
-        'Basic on-page SEO setup (titles, meta, semantic structure)',
-        'Handover walkthrough and agreed revision round(s) in the proposal',
+        'Kickoff brief to lock pages, sections, and must-have features for your chosen tier',
+        'Responsive implementation for everything in the signed scope',
+        'Contact or lead capture (or equivalent CTA) when included in scope',
+        'Deployment support to your hosting or our recommended stack',
+        'Basic on-page SEO (titles, meta, semantic structure) for marketing pages in scope',
+        'Handover walkthrough and revision rounds as stated in your proposal',
       ],
       extras: [
-        'Online stores, bookings, dashboards, custom backends, and multilingual or large content programs are scoped as separate phases.',
+        'Copywriting, photography, large migrations, premium plugins, and ongoing retainers beyond light support are quoted separately.',
       ],
     },
     features: [
@@ -114,7 +226,7 @@ export const services = [
       'Responsive, mobile-first design',
       'Performance & basic SEO setup',
     ],
-    technologies: ['React', 'Next.js', 'Tailwind CSS', 'Vercel', 'WordPress'],
+    technologies: ['React', 'Next.js', 'Tailwind CSS', 'Vercel'],
     process: [
       { title: 'Brief', desc: 'Goals, audience, and page list.' },
       { title: 'Design', desc: 'Layout, content structure, brand fit.' },
@@ -130,10 +242,48 @@ export const services = [
     icon: <Cloud className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹30,000',
-      note: 'Final cost depends on cloud footprint and complexity; most defined slices start here. Ongoing DevOps retainers quoted separately.',
+      note: 'Scoped cloud slices below; retainers and 24/7 ops quoted separately. All figures indicative, excl. taxes.',
       model: 'One-time projects + optional monthly retainer',
       summary:
-        'Pricing is scope-dependent, but a typical entry engagement covers a well-defined slice: a new environment baseline, a CI/CD path for one app, or a small migration batch. Larger footprints and always-on operations move to milestone billing or a retainer.',
+        'Entry projects cover a single well-defined outcome; mid-tier adds automation depth; enterprise-grade footprints and multi-account setups are phased from a higher starting point—with everything confirmed after a short architecture review.',
+      packages: [
+        {
+          id: 'cloud-foundation',
+          name: 'Environment foundation',
+          headline: 'From ₹30,000',
+          tagline: 'One focused slice: baseline account setup, simple networking, or a small migration batch—as agreed in writing.',
+          bullets: [
+            'Target-state diagram for the agreed slice in your cloud account',
+            'Implementation of baseline resources or one bounded migration path',
+            'Runbook notes and one knowledge-transfer session',
+            'Milestone billing aligned to agreed checkpoints',
+          ],
+        },
+        {
+          id: 'cloud-automation',
+          name: 'CI/CD & automation',
+          headline: 'From ₹65,000',
+          tagline: 'Pipeline plus IaC starter for one application line; monitoring hooks as scoped.',
+          bullets: [
+            'CI/CD path for agreed repos and environments',
+            'Foundational IaC for resources in scope (e.g. Terraform)',
+            'Basic monitoring or alerting wiring where listed',
+            'Handover documentation and operator walkthrough',
+          ],
+        },
+        {
+          id: 'cloud-platform',
+          name: 'Platform & scale',
+          headline: 'From ₹1,25,000',
+          tagline: 'Multi-service footprints, landing-zone patterns, or production hardening—scoped after discovery.',
+          bullets: [
+            'Architecture and phased plan for larger or regulated workloads',
+            'Implementation spread across agreed milestones',
+            'Optional always-on or extended support via separate retainer',
+            'Investment and timeline fixed before major build phases',
+          ],
+        },
+      ],
       included: [
         'Architecture or target-state diagram for the agreed slice',
         'Implementation of agreed automation (e.g. pipeline, basic IaC) in your cloud account',
@@ -167,10 +317,48 @@ export const services = [
     icon: <Shield className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹40,000',
-      note: 'Assessments and remediation sprints. Full compliance programs (ISO, SOC 2, etc.) on quote.',
+      note: 'Assessment-first tiers below; formal certification programmes and pen tests quoted separately. All figures indicative, excl. taxes.',
       model: 'Assessment sprint · remediation quoted separately',
       summary:
-        'Starting fees typically fund a focused assessment: interviews, configuration review, and a prioritized findings report. Remediation, policy packs, and audit support are scoped as follow-on work with clear deliverables.',
+        'Start with a focused security assessment, deepen coverage for multiple systems, or engage for a broader compliance programme—remediation and audit support are always scoped as clear follow-on work.',
+      packages: [
+        {
+          id: 'sec-assessment',
+          name: 'Focused assessment',
+          headline: 'From ₹40,000',
+          tagline: 'Scoped review of agreed systems: interviews, config checks, and a prioritized findings report.',
+          bullets: [
+            'Assessment limited to named apps, cloud accounts, or product areas',
+            'Risk and gap summary with severity and rough effort hints',
+            'Prioritized remediation backlog for your team or ours',
+            'Stakeholder walkthrough of results',
+          ],
+        },
+        {
+          id: 'sec-extended',
+          name: 'Extended review',
+          headline: 'From ₹85,000',
+          tagline: 'Broader footprint—more systems, deeper evidence review, and richer remediation planning.',
+          bullets: [
+            'Wider scope across additional services or environments as listed',
+            'Deeper configuration and access-control review where agreed',
+            'Remediation plan with phased recommendations',
+            'Optional workshop to align security and engineering on fixes',
+          ],
+        },
+        {
+          id: 'sec-programme',
+          name: 'Compliance programme',
+          headline: 'From ₹2,00,000',
+          tagline: 'ISO/SOC2-style readiness, policy packs, and sustained evidence work—scoped after scoping call.',
+          bullets: [
+            'Programme charter, control mapping, and milestone plan',
+            'Policy templates and evidence structure aligned to your target framework',
+            'Remediation support blocks as agreed—pen tests billed separately if needed',
+            'Final fee and timeline confirmed before programme kickoff',
+          ],
+        },
+      ],
       included: [
         'Scoped assessment against agreed systems or product areas',
         'Risk and gap summary with severity and effort hints',
@@ -204,10 +392,48 @@ export const services = [
     icon: <Bot className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹80,000',
-      note: 'Workflow automation and integrations. Custom AI/ML and LLM features priced to your use case.',
+      note: 'Automation tiers below; production LLM and custom ML scoped after discovery. All figures indicative, excl. taxes.',
       model: 'Fixed automation packs or time-and-materials',
       summary:
-        'Early budgets usually target one or two high-friction workflows or a bounded integration (e.g. CRM ↔ billing). Broader RPA estates, custom models, and production LLM features scale with data, safety, and hosting needs.',
+        'Start with one or two high-friction workflows, expand to a department-wide automation footprint, or invest in custom AI/LLM features—with safety, data, and hosting needs driving the final quote on the top tier.',
+      packages: [
+        {
+          id: 'auto-workflow',
+          name: 'Workflow automation pack',
+          headline: 'From ₹80,000',
+          tagline: 'One or two bounded automations or integrations (e.g. forms → CRM, billing sync).',
+          bullets: [
+            'Process mapping and design for agreed flows only',
+            'Connectors, bots, or n8n/Power Automate flows in scope',
+            'Basic monitoring and error handling for automated paths',
+            'Documentation and operator handover',
+          ],
+        },
+        {
+          id: 'auto-platform',
+          name: 'Multi-flow automation',
+          headline: 'From ₹1,60,000',
+          tagline: 'Several workflows, richer exception handling, and more system touchpoints.',
+          bullets: [
+            'Backlog of automations prioritized with your team',
+            'Shared patterns for logging, retries, and alerts where applicable',
+            'Staging and production rollout plan',
+            'Training for owners who will operate day-to-day',
+          ],
+        },
+        {
+          id: 'auto-ai-custom',
+          name: 'Custom AI & LLM',
+          headline: 'From ₹2,75,000',
+          tagline: 'Document AI, assistants, or custom models—data volume, safety, and hosting drive final pricing (discussion-based).',
+          bullets: [
+            'Discovery on data sources, prompts, evaluation, and risk',
+            'Build of agreed MVP with human-in-the-loop where required',
+            'Production hardening and cost controls as scoped',
+            'Phased quote after technical assessment',
+          ],
+        },
+      ],
       included: [
         'Process mapping and automation design for agreed flows',
         'Build of connectors, bots, or workflows in the chosen stack',
@@ -241,10 +467,48 @@ export const services = [
     icon: <Headphones className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹18,000/mo',
-      note: 'Monthly retainers with defined SLAs. Ad-hoc support and hourly blocks also available.',
+      note: 'Monthly retainers below; ad-hoc hours available. SLAs and coverage vary by tier. All figures indicative, excl. taxes.',
       model: 'Monthly retainer (SLA-based) or prepaid hours',
       summary:
-        'Retainers bundle a predictable response window and agreed channels (e.g. ticket + email). Higher tiers add monitoring, change windows, and faster severity-1 targets. Smaller stacks can start with a limited-hour pack instead.',
+        'Choose a light coverage pack, a standard operating retainer, or a priority tier with faster targets and room for monitoring—exact hours and channels are fixed in your agreement.',
+      packages: [
+        {
+          id: 'support-essential',
+          name: 'Essential care',
+          headline: 'From ₹18,000/mo',
+          tagline: 'Light retainer for small stacks—business-hours coverage and agreed response targets.',
+          bullets: [
+            'Defined ticket/email channel and severity definitions',
+            'Business-hours response targets per agreed SLA table',
+            'Routine patching and minor fixes within included hours',
+            'Monthly summary of work completed (tier-dependent)',
+          ],
+        },
+        {
+          id: 'support-professional',
+          name: 'Professional',
+          headline: 'From ₹38,000/mo',
+          tagline: 'More hours, faster targets, and room for proactive checks on critical paths.',
+          bullets: [
+            'Higher monthly hour bank or broader system coverage as listed',
+            'Improved severity-1/2 targets where agreed',
+            'Health checks or monitoring hooks if scoped',
+            'Quarterly review of incidents and recommendations',
+          ],
+        },
+        {
+          id: 'support-priority',
+          name: 'Priority & after-hours',
+          headline: 'From ₹65,000/mo',
+          tagline: 'Mission-critical coverage, extended windows, or heavier change load—final SLA on discussion.',
+          bullets: [
+            'Custom SLA including extended or weekend coverage if required',
+            'Dedicated severity handling and escalation path',
+            'Optional on-call rotation or vendor coordination as scoped',
+            'Pricing and hours confirmed before contract start',
+          ],
+        },
+      ],
       included: [
         'Defined coverage window and response targets per severity',
         'Ticketing or agreed channel for requests',
@@ -278,10 +542,48 @@ export const services = [
     icon: <Lightbulb className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹35,000',
-      note: 'Strategy sprints and workshops. Ongoing advisory available on a monthly retainer.',
+      note: 'Sprint-based tiers below; ongoing advisory retainers quoted separately. All figures indicative, excl. taxes.',
       model: 'Sprint workshop · optional advisory retainer',
       summary:
-        'Starting engagements are usually a short sprint: interviews, artifact review, and a concrete recommendation deck or roadmap. Longer due diligence, vendor RFP support, or embedded advisory is quoted as a follow-on.',
+        'Pick a compact strategy sprint, a deeper options-and-roadmap engagement, or an extended advisory mandate—each tier ends with concrete artifacts you can execute internally or with us.',
+      packages: [
+        {
+          id: 'consult-sprint',
+          name: 'Strategy sprint',
+          headline: 'From ₹35,000',
+          tagline: 'Short engagement: goals, constraints, options, and a prioritized roadmap or decision memo.',
+          bullets: [
+            'Facilitated sessions with leadership or product owners',
+            'Synthesis of goals, constraints, and realistic options',
+            'Prioritized roadmap or decision memo',
+            'One follow-up Q&A session',
+          ],
+        },
+        {
+          id: 'consult-deep-dive',
+          name: 'Deep-dive & options',
+          headline: 'From ₹72,000',
+          tagline: 'More stakeholder coverage, richer artifacts, and vendor/build-vs-buy framing where needed.',
+          bullets: [
+            'Extended interviews and document/artifact review',
+            'Scenario comparison with trade-offs and recommendation',
+            'Roadmap with phases, risks, and dependency notes',
+            'Workshop to align leadership on next steps',
+          ],
+        },
+        {
+          id: 'consult-advisory',
+          name: 'Advisory programme',
+          headline: 'From ₹1,40,000',
+          tagline: 'Multi-month guidance, vendor diligence support, or transformation steering—scoped collaboratively.',
+          bullets: [
+            'Programme charter and cadence (e.g. monthly steering + async reviews)',
+            'Support for RFPs, vendor shortlists, or diligence checkpoints as agreed',
+            'Artifacts tailored to board or investor audiences if required',
+            'Retainer length and fee agreed upfront',
+          ],
+        },
+      ],
       included: [
         'Facilitated sessions with your leadership or product owners',
         'Synthesis of goals, constraints, and options',
@@ -315,10 +617,48 @@ export const services = [
     icon: <Presentation className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹12,000',
-      note: 'Per deck or document package. Pitch decks, profiles, and reports with revision rounds included.',
+      note: 'Per-deck tiers below; rush, motion, and illustration add-ons quoted separately. All figures indicative, excl. taxes.',
       model: 'Per deliverable · fixed rounds of revision',
       summary:
-        'Packages are sized by slide count, brand complexity, and whether we structure narrative from scratch or polish your draft. Larger decks, print-ready reports, and rush timelines are quoted upfront.',
+        'Standard decks for internal or SMB use, richer investor or sales collateral, or large flagship documents—slide counts, brand complexity, and revision rounds are fixed in each proposal.',
+      packages: [
+        {
+          id: 'deck-standard',
+          name: 'Standard deck',
+          headline: 'From ₹12,000',
+          tagline: 'Compact deck—typically up to ~15 slides, polish-your-content or light narrative help.',
+          bullets: [
+            'Agreed slide count and master layout in proposal',
+            'On-brand styling, charts, and icons as scoped',
+            'Fixed revision rounds (stated in writing)',
+            'Deliverables: PPT / Slides / PDF as agreed',
+          ],
+        },
+        {
+          id: 'deck-professional',
+          name: 'Professional deck',
+          headline: 'From ₹28,000',
+          tagline: 'Larger or higher-stakes decks—investor, sales, or company profile—with more slides and structure.',
+          bullets: [
+            'Higher slide budget and deeper narrative or restructuring support',
+            'Data visuals and section templates aligned to your brand',
+            'Additional revision round vs standard tier where listed',
+            'Source files and export pack per agreement',
+          ],
+        },
+        {
+          id: 'deck-flagship',
+          name: 'Flagship & reports',
+          headline: 'From ₹48,000',
+          tagline: 'Large decks, print-ready reports, or multi-deliverable sets—scope and timeline confirmed with you.',
+          bullets: [
+            'Long-form slide programmes or formatted report/document packages',
+            'Print or digital export requirements captured up front',
+            'Optional data cleanup or content support as add-on',
+            'Rush timelines quoted if you need a hard deadline',
+          ],
+        },
+      ],
       included: [
         'Agreed slide or page count and master layout system',
         'On-brand visuals, charts, and iconography as scoped',
@@ -354,10 +694,48 @@ export const services = [
     icon: <TrendingUp className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹28,000/mo',
-      note: 'Retainers for SEO, content, and campaigns. One-time technical SEO audits from ₹45,000.',
+      note: 'Monthly retainers below; ad spend always separate. One-time audits from ₹45,000 on request. All figures indicative, excl. taxes.',
       model: 'Monthly growth retainer · one-time audits available',
       summary:
-        'Ongoing retainers cover a defined monthly scope: technical fixes within budget, content or landing pages, and reporting. Paid media spend is billed separately; our fee covers strategy, build, and optimization of campaigns you fund.',
+        'Grow from a lean SEO/content rhythm into a fuller growth retainer or a high-velocity programme—monthly hours, deliverables, and reporting depth scale with each tier.',
+      packages: [
+        {
+          id: 'growth-essential',
+          name: 'Growth essential',
+          headline: 'From ₹28,000/mo',
+          tagline: 'Focused monthly scope: technical fixes within hour budget, light content, and core reporting.',
+          bullets: [
+            'Monthly plan with prioritized SEO or growth tasks',
+            'On-page and technical fixes within included hours',
+            'Reporting on agreed KPIs (traffic, rankings, or campaign metrics)',
+            'Quarterly roadmap refresh where applicable',
+          ],
+        },
+        {
+          id: 'growth-accelerate',
+          name: 'Accelerate',
+          headline: 'From ₹55,000/mo',
+          tagline: 'More content, landing pages, and optimization cycles; room for light paid-media build support.',
+          bullets: [
+            'Higher monthly hour bank and broader channel coverage as listed',
+            'Additional landing pages or content pieces per month',
+            'Closer performance reviews and experiment backlog',
+            'Paid media creative/build support—ad spend still separate',
+          ],
+        },
+        {
+          id: 'growth-scale',
+          name: 'Scale & campaigns',
+          headline: 'From ₹95,000/mo',
+          tagline: 'Heavier production, multi-channel coordination, or faster iteration—scoped to your growth targets.',
+          bullets: [
+            'Expanded deliverables for SEO, content, and campaign ops as agreed',
+            'More frequent reporting and strategic check-ins',
+            'Coordination with your internal or agency partners if needed',
+            'Custom scope and fee confirmed before start',
+          ],
+        },
+      ],
       included: [
         'Monthly plan with prioritized SEO or growth tasks',
         'Reporting on rankings, traffic, or campaign KPIs as agreed',
@@ -397,10 +775,48 @@ export const services = [
     icon: <Database className="w-8 h-8" />,
     pricing: {
       headline: 'From ₹26,000',
-      note: 'Schema design, migration, APIs, and integrations. Complex multi-system work quoted after discovery.',
+      note: 'Bounded data projects below; CDC, zero-downtime cutovers, and multi-year programmes after assessment. All figures indicative, excl. taxes.',
       model: 'Milestone project · schema / migration / API slices',
       summary:
-        'Entry pricing maps to one focused outcome: a v1 schema and ERD, a bounded migration with validation, or API layers for a specific integration. Multi-year legacy decompositions and real-time sync at scale are phased and priced accordingly.',
+        'Start with a single sharp outcome—schema, migration slice, or integration API—scale to multi-system migration, or engage for enterprise data programmes phased from a higher entry point.',
+      packages: [
+        {
+          id: 'db-slice',
+          name: 'Schema or integration slice',
+          headline: 'From ₹26,000',
+          tagline: 'One focused deliverable: v1 schema/ERD, a small API layer, or a bounded integration as written in scope.',
+          bullets: [
+            'Target design for the agreed database or integration surface',
+            'Implementation with basic tests for scoped paths',
+            'Handover notes for your engineers or ops',
+            'Milestone billing tied to agreed checkpoints',
+          ],
+        },
+        {
+          id: 'db-migration',
+          name: 'Migration batch',
+          headline: 'From ₹58,000',
+          tagline: 'Larger data move with validation, reconciliation plan, and cutover steps for one systems pair.',
+          bullets: [
+            'Extract/transform/load or sync approach for agreed entities',
+            'Validation scripts or sampling plan as scoped',
+            'Cutover playbook and rollback considerations',
+            'Post-cutover smoke checks within agreed window',
+          ],
+        },
+        {
+          id: 'db-enterprise',
+          name: 'Enterprise data programme',
+          headline: 'From ₹1,15,000',
+          tagline: 'Multi-system integration, ongoing sync, or complex legacy decomposition—phased after discovery.',
+          bullets: [
+            'Technical assessment and phased programme plan',
+            'Implementation spread across agreed milestones',
+            'Optional always-on sync or CDC quoted as follow-on phases',
+            'Investment and timeline fixed before major execution',
+          ],
+        },
+      ],
       included: [
         'Target schema or integration design for the agreed scope',
         'Implementation scripts or services with basic tests',

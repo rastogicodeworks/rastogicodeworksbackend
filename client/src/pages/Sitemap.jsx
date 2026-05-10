@@ -11,8 +11,6 @@ export default function Sitemap() {
     { to: '/about', label: 'About' },
     { to: '/services', label: 'Services' },
     { to: '/clients', label: 'Clients' },
-    { to: '/compare', label: 'Compare' },
-    { to: '/pricing', label: 'Pricing' },
     { to: '/contact', label: 'Contact' },
     { to: '/login', label: 'Login' },
   ];
@@ -40,7 +38,7 @@ export default function Sitemap() {
     <div className="overflow-x-hidden bg-white">
       <SEO
         title="Sitemap"
-        description="Rastogi Codeworks sitemap: quick links to all pages including Home, About, Services, Pricing, Contact, Blog, Case Studies, FAQ, and legal policies."
+        description="Rastogi Codeworks sitemap: quick links to all pages including Home, About, Services, Contact, Blog, Case Studies, FAQ, and legal policies."
         path="/sitemap"
         keywords="Rastogi Codeworks sitemap, site map, all pages"
       />
