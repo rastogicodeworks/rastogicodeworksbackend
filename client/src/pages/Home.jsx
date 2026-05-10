@@ -300,7 +300,7 @@ export default function Home() {
                     cmsTrustLine
                   ) : (
                     <>
-                      <span className="font-semibold text-white">Starting from ₹10,999</span>
+                      <span className="font-semibold text-white">Starting from ₹15,000</span>
                       <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
                         |
                       </span>

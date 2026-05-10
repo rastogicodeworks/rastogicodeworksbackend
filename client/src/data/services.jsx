@@ -11,7 +11,7 @@ export const services = [
     fullDesc: 'We help you establish a solid technology foundation from day one. From tooling and workflows to governance and team structure, we design an organization setup that aligns with your goals and grows with you.',
     icon: <Building2 className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹50,000',
+      headline: 'From ₹35,000',
       note: 'Discovery workshop, tooling plan, and rollout roadmap. Larger programs quoted after scope.',
       model: 'Project-based · phased milestones',
       summary:
@@ -49,11 +49,11 @@ export const services = [
     fullDesc: 'We build software that works. From responsive web apps to native and cross-platform mobile applications, we use proven technologies and agile practices to deliver on time and within budget.',
     icon: <Code className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹1,50,000',
+      headline: 'From ₹1,00,000',
       note: 'Typical MVPs and focused product builds. Enterprise and multi-platform apps scoped separately.',
       model: 'Fixed phases, milestone billing, or retainer',
       summary:
-        'Starting ranges usually cover a scoped web product or a single-platform app with a clear feature set. We break work into milestones (design, build, hardening, launch) so you see progress before each payment.',
+        'Starting at one lakh INR covers a scoped web product or a single-platform app with a clear feature set. We break work into milestones (design, build, hardening, launch) so you see progress before each payment.',
       included: [
         'Requirements workshop and backlog for the agreed scope',
         'UI implementation for screens in scope (design may be separate or bundled)',
@@ -89,11 +89,11 @@ export const services = [
       'We design and build professional websites for brands, startups, and local businesses. From sharp one-page landings to small multi-page marketing sites, we focus on clarity, performance, mobile-first layout, and essentials like contact forms and basic SEO—so you can launch quickly and grow into larger builds when you are ready.',
     icon: <Globe className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹10,999',
-      note: 'Compact landing or small multi-page sites. E-commerce, member portals, and app-style products quoted separately.',
+      headline: 'From ₹15,000',
+      note: 'Normal static sites through dynamic builds. E-commerce, member portals, and app-style products quoted separately.',
       model: 'Fixed-scope project · milestone billing',
       summary:
-        'Starting pricing is aimed at a tightly scoped site: agreed page count, responsive layout, and go-live on your domain. Add-ons like custom illustrations, large content migration, or complex integrations are quoted after a short brief so the scope stays predictable.',
+        'Starting pricing covers straightforward sites from normal marketing pages up to dynamic layouts: agreed page count, responsive implementation, and go-live on your domain. Add-ons like custom illustrations, large content migration, or complex integrations are quoted after a short brief so the scope stays predictable.',
       included: [
         'Kickoff brief to lock pages, sections, and must-have features',
         'Responsive implementation for the agreed page set',
@@ -129,11 +129,11 @@ export const services = [
     fullDesc: 'We design and manage cloud infrastructure that scales. Whether you are on AWS, Azure, or Google Cloud, we help you optimize costs, automate deployments, and maintain high availability.',
     icon: <Cloud className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹45,000',
-      note: 'One-time setup, migration, or pipeline work. Ongoing DevOps retainers from ₹25,000/mo.',
+      headline: 'From ₹30,000',
+      note: 'Final cost depends on cloud footprint and complexity; most defined slices start here. Ongoing DevOps retainers quoted separately.',
       model: 'One-time projects + optional monthly retainer',
       summary:
-        'Entry pricing often covers a well-defined slice: a new environment baseline, a CI/CD path for one app, or a small migration batch. Larger footprints and always-on operations move to milestone billing or a retainer.',
+        'Pricing is scope-dependent, but a typical entry engagement covers a well-defined slice: a new environment baseline, a CI/CD path for one app, or a small migration batch. Larger footprints and always-on operations move to milestone billing or a retainer.',
       included: [
         'Architecture or target-state diagram for the agreed slice',
         'Implementation of agreed automation (e.g. pipeline, basic IaC) in your cloud account',
@@ -166,7 +166,7 @@ export const services = [
     fullDesc: 'Security and compliance are built into our approach. We help you assess risks, implement controls, and prepare for audits so you can operate with confidence and meet regulatory requirements.',
     icon: <Shield className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹65,000',
+      headline: 'From ₹40,000',
       note: 'Assessments and remediation sprints. Full compliance programs (ISO, SOC 2, etc.) on quote.',
       model: 'Assessment sprint · remediation quoted separately',
       summary:
@@ -203,7 +203,7 @@ export const services = [
     fullDesc: 'We combine process automation and AI to reduce manual work and improve decisions. From RPA and workflow automation to custom ML models and integrations with LLMs, we deliver practical, measurable results.',
     icon: <Bot className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹1,20,000',
+      headline: 'From ₹80,000',
       note: 'Workflow automation and integrations. Custom AI/ML and LLM features priced to your use case.',
       model: 'Fixed automation packs or time-and-materials',
       summary:
@@ -396,11 +396,11 @@ export const services = [
     fullDesc: 'We design and build databases that scale and integrate seamlessly with your apps and third-party systems. From architecture and migration to APIs, backend connectivity, and cloud databases, we deliver reliable data solutions.',
     icon: <Database className="w-8 h-8" />,
     pricing: {
-      headline: 'From ₹55,000',
+      headline: 'From ₹26,000',
       note: 'Schema design, migration, APIs, and integrations. Complex multi-system work quoted after discovery.',
       model: 'Milestone project · schema / migration / API slices',
       summary:
-        'Starting budgets usually map to one clear outcome: a v1 schema and ERD, a bounded migration with validation, or API layers for a specific integration. Multi-year legacy decompositions and real-time sync at scale are phased and priced accordingly.',
+        'Entry pricing maps to one focused outcome: a v1 schema and ERD, a bounded migration with validation, or API layers for a specific integration. Multi-year legacy decompositions and real-time sync at scale are phased and priced accordingly.',
       included: [
         'Target schema or integration design for the agreed scope',
         'Implementation scripts or services with basic tests',

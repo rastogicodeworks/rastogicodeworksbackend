@@ -3535,7 +3535,7 @@ export default function AdminDashboard() {
                             type="text"
                             value={appSettings.siteContent?.heroTrustLine || ''}
                             onChange={(e) => updateSiteContentField('heroTrustLine', e.target.value)}
-                            placeholder="e.g. Starting from ₹10,999 | Delivered in 3–5 days"
+                            placeholder="e.g. Starting from ₹15,000 | Delivered in 3–5 days"
                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
                           />
                         </div>
