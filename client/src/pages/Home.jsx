@@ -5,6 +5,7 @@ import PageCTA from '../components/PageCTA';
 import SEO from '../components/SEO';
 import ServiceCardActions from '../components/ServiceCardActions';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import API_BASE from '../config/api';
 const logos = [
   'Nb Aurum',
   'Rastogi&Associates',
@@ -183,7 +184,30 @@ function CountUp({ value, duration = 1600 }) {
   return <span ref={ref}>{display}{suffix}</span>;
 }
 
+const DEFAULT_SEO_DESCRIPTION =
+  'Rastogi Codeworks - Best software development & web development across India. Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata and all states & cities. Custom web apps, mobile apps, cloud & digital solutions. Where Code Meets Experience.';
+
 export default function Home() {
+  const [cmsHome, setCmsHome] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/site-content`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled || !data.success) return;
+        const sc = data.siteContent && typeof data.siteContent === 'object' ? data.siteContent : {};
+        setCmsHome(sc);
+      } catch {
+        /* offline / API down — keep built-in copy */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -199,11 +223,24 @@ export default function Home() {
   const heroHeadlineAccent =
     'font-semibold text-[#a7f3d0] drop-shadow-[0_0_28px_rgba(110,231,183,0.55),0_0_56px_rgba(16,185,129,0.2)]';
 
+  const sc = cmsHome || {};
+  const seoDescription =
+    typeof sc.seoHomeDescription === 'string' && sc.seoHomeDescription.trim()
+      ? sc.seoHomeDescription.trim()
+      : DEFAULT_SEO_DESCRIPTION;
+  const heroBgSrc =
+    typeof sc.heroBackgroundImage === 'string' && sc.heroBackgroundImage.trim()
+      ? `${API_BASE}${sc.heroBackgroundImage.trim().startsWith('/') ? '' : '/'}${sc.heroBackgroundImage.trim()}`
+      : '/herosection.png';
+  const cmsHeadline = typeof sc.heroHeadline === 'string' && sc.heroHeadline.trim();
+  const cmsSubtext = typeof sc.heroSubtext === 'string' && sc.heroSubtext.trim();
+  const cmsTrustLine = typeof sc.heroTrustLine === 'string' && sc.heroTrustLine.trim();
+
   return (
     <div className="overflow-x-hidden">
       <SEO
         title=""
-        description="Rastogi Codeworks - Best software development & web development across India. Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata and all states & cities. Custom web apps, mobile apps, cloud & digital solutions. Where Code Meets Experience."
+        description={seoDescription}
         path="/"
         keywords="software development India, web development company, custom software, mobile app development, Mumbai Delhi Bangalore, Rastogi Codeworks, digital solutions"
         jsonLd={organizationJsonLd}
@@ -211,7 +248,7 @@ export default function Home() {
       {/* Hero Section — full-viewport image background */}
       <section className="relative isolate flex w-full min-h-[100svh] flex-col justify-center overflow-hidden text-white max-sm:min-h-[min(100svh,900px)]">
         <img
-          src="/herosection.png"
+          src={heroBgSrc}
           alt=""
           width={1920}
           height={1080}
@@ -228,22 +265,28 @@ export default function Home() {
         <div className="relative z-10 mx-auto w-full max-w-3xl px-5 sm:px-6 lg:max-w-4xl lg:px-8">
           <div className="flex flex-col items-center pb-24 text-center max-sm:pt-[max(9.25rem,calc(7rem+env(safe-area-inset-top,0px)))] max-sm:pb-28 sm:pt-36 sm:pb-24 md:pt-40 md:pb-28 lg:pt-44 lg:pb-28">
             <h1 className="animate-fade-in-up w-full max-w-[24rem] text-balance text-[2rem] font-bold leading-[1.2] tracking-[-0.02em] text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] min-[400px]:text-[2.125rem] min-[420px]:text-[2.25rem] sm:max-w-3xl sm:text-4xl sm:leading-[1.14] sm:tracking-tight md:text-5xl md:leading-[1.1] lg:max-w-4xl lg:text-6xl lg:leading-[1.06]">
-              <span className="text-white">Turn </span>
-              <span className={heroHeadlineAccent}>visitors</span>
-              <span className="text-white"> into </span>
-              <span className={heroHeadlineAccent}>customers</span>
-              <br />
-              <span className="text-white">with </span>
-              <span className={`whitespace-nowrap ${heroHeadlineAccent}`}>AI-powered</span>
-              <span className="text-white"> websites.</span>
+              {cmsHeadline ? (
+                <span className="whitespace-pre-line text-white">{cmsHeadline}</span>
+              ) : (
+                <>
+                  <span className="text-white">Turn </span>
+                  <span className={heroHeadlineAccent}>visitors</span>
+                  <span className="text-white"> into </span>
+                  <span className={heroHeadlineAccent}>customers</span>
+                  <br />
+                  <span className="text-white">with </span>
+                  <span className={`whitespace-nowrap ${heroHeadlineAccent}`}>AI-powered</span>
+                  <span className="text-white"> websites.</span>
+                </>
+              )}
             </h1>
 
             <p
               className="animate-fade-in-up mt-5 max-w-[21rem] text-pretty text-[0.9375rem] leading-relaxed text-white/78 sm:mt-6 sm:max-w-2xl sm:text-[1.0625rem] sm:leading-relaxed"
               style={{ animationDelay: '140ms' }}
             >
-              Fast, mobile-ready pages with clear copy and forms—launched on your domain with help at every step, not
-              just a handoff file.
+              {cmsSubtext ||
+                'Fast, mobile-ready pages with clear copy and forms—launched on your domain with help at every step, not just a handoff file.'}
             </p>
 
             {/* Trust facts — single line on mobile; glass pill from sm */}
@@ -253,15 +296,21 @@ export default function Home() {
             >
               <div className="sm:inline-flex sm:max-w-full sm:flex-wrap sm:items-center sm:justify-center sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/25 sm:bg-white/10 sm:px-7 sm:py-3.5 sm:shadow-lg sm:shadow-black/20 sm:backdrop-blur-md">
                 <p className="text-center text-[13px] font-medium leading-relaxed text-white/90 min-[380px]:text-sm sm:text-sm sm:leading-snug">
-                  <span className="font-semibold text-white">Starting from ₹10,999</span>
-                  <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
-                    |
-                  </span>
-                  <span>Delivered in 3–5 days</span>
-                  <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
-                    |
-                  </span>
-                  <span>100% support included</span>
+                  {cmsTrustLine ? (
+                    cmsTrustLine
+                  ) : (
+                    <>
+                      <span className="font-semibold text-white">Starting from ₹10,999</span>
+                      <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
+                        |
+                      </span>
+                      <span>Delivered in 3–5 days</span>
+                      <span className="mx-1.5 text-white/35 select-none sm:mx-2 sm:mx-3" aria-hidden>
+                        |
+                      </span>
+                      <span>100% support included</span>
+                    </>
+                  )}
                 </p>
               </div>
             </div>

@@ -7,7 +7,7 @@ const founder = {
   role: 'Founder & CEO',
   focus: 'Leading Rastogi Codeworks with a focus on building reliable software, transparent client relationships, and a team that ships with confidence. Passionate about turning ideas into products that move businesses forward.',
   initials: 'VR',
-  linkedin: 'https://www.linkedin.com/in/vasu-rastogi',
+  linkedin: 'https://www.linkedin.com/in/vasurastogi/',
   whatsapp: 'https://wa.me/918859985607',
   phone: 'tel:+918859985607',
   email: `mailto:rastogicodeworks@gmail.com?subject=${encodeURIComponent('Hello from your website')}&body=${encodeURIComponent('Hey,\n\nI am reaching out from your website. I would like to connect with Rastogi Codeworks.\n\nBest regards')}`,

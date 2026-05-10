@@ -262,7 +262,7 @@ export default function About() {
                   role: 'Founder & CEO',
                   image: '/Vasu.jpeg',
                   bio: 'As a Founder & CEO, Vasu Rastogi leads Rastogi Codeworks with a focus on building reliable software, transparent client relationships, and a team that ships with confidence. Passionate about turning ideas into products that move businesses forward.',
-                  linkedin: 'https://www.linkedin.com/in/vasu-rastogi',
+                  linkedin: 'https://www.linkedin.com/in/vasurastogi/',
                   whatsapp: 'https://wa.me/918859985607',
                   phone: 'tel:+918859985607',
                 }

@@ -1,7 +1,50 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
 import { requireAdmin } from '../middleware/auth.js';
 import { AppSettings } from '../models/AppSettings.js';
 import { sendMail, isMailTransportConfigured } from '../services/mail.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const allowedImageMimes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+]);
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
+    const name = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (allowedImageMimes.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, GIF, WebP, or SVG images are allowed.'));
+    }
+  },
+});
 
 export const appSettingsRouter = Router();
 appSettingsRouter.use(requireAdmin);
@@ -71,6 +114,21 @@ appSettingsRouter.patch('/', async (req, res) => {
         doc[key] = b[key];
       }
     }
+    if (
+      b.siteContent !== undefined &&
+      typeof b.siteContent === 'object' &&
+      b.siteContent !== null &&
+      !Array.isArray(b.siteContent)
+    ) {
+      const prev =
+        doc.siteContent &&
+        typeof doc.siteContent === 'object' &&
+        !Array.isArray(doc.siteContent)
+          ? { ...doc.siteContent }
+          : {};
+      doc.siteContent = { ...prev, ...b.siteContent };
+      doc.markModified('siteContent');
+    }
     await doc.save();
     return res.json({
       success: true,
@@ -117,5 +175,73 @@ appSettingsRouter.post('/test-email', async (req, res) => {
   } catch (err) {
     console.error('[settings/app test-email]', err);
     return res.status(500).json({ success: false, message: 'Failed to send test email.' });
+  }
+});
+
+// POST /api/settings/app/media — upload image (multipart field name: file)
+appSettingsRouter.post('/media', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      const msg =
+        err instanceof multer.MulterError ? err.message : err.message || 'Upload failed.';
+      return res.status(400).json({ success: false, message: msg });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded.' });
+    }
+    const doc = await getOrCreateSettings();
+    const id = crypto.randomUUID();
+    const entry = {
+      id,
+      storedName: req.file.filename,
+      originalName: String(req.file.originalname || '').slice(0, 200),
+      mimeType: req.file.mimetype,
+      size: req.file.size || 0,
+      uploadedAt: new Date(),
+    };
+    doc.mediaImages = [...(doc.mediaImages || []), entry];
+    await doc.save();
+    return res.status(201).json({
+      success: true,
+      media: { ...entry, url: `/uploads/${entry.storedName}` },
+      settings: toPublicSettings(doc),
+      mailTransportConfigured: isMailTransportConfigured(),
+    });
+  } catch (err) {
+    console.error('[settings/app media post]', err);
+    return res.status(500).json({ success: false, message: 'Failed to save upload.' });
+  }
+});
+
+// DELETE /api/settings/app/media/:id — remove library entry and file from disk
+appSettingsRouter.delete('/media/:id', async (req, res) => {
+  try {
+    const doc = await getOrCreateSettings();
+    const id = String(req.params.id || '').trim();
+    const list = doc.mediaImages || [];
+    const idx = list.findIndex((m) => m.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, message: 'Image not found.' });
+    }
+    const [removed] = list.splice(idx, 1);
+    doc.mediaImages = list;
+    await doc.save();
+    try {
+      fs.unlinkSync(path.join(uploadsDir, removed.storedName));
+    } catch (_) {
+      /* file may already be gone */
+    }
+    return res.json({
+      success: true,
+      settings: toPublicSettings(doc),
+      mailTransportConfigured: isMailTransportConfigured(),
+    });
+  } catch (err) {
+    console.error('[settings/app media delete]', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete image.' });
   }
 });

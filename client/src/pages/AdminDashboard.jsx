@@ -49,6 +49,7 @@ import {
   Sparkles,
   ExternalLink,
   BookOpen,
+  Globe,
 } from 'lucide-react';
 import { downloadInvoicePdf } from '../utils/invoicePdf.js';
 import { downloadQuotationPdf } from '../utils/quotationPdf.js';
@@ -119,6 +120,7 @@ export default function AdminDashboard() {
       { id: 'projects', label: 'Projects', icon: FolderKanban },
       { id: 'quotations', label: 'Quotation Generator', icon: FileText },
       { id: 'clients', label: 'Clients', icon: Users },
+      { id: 'website', label: 'Website', icon: Globe },
       { id: 'reports', label: 'Reports', icon: BarChart2 },
       { id: 'hiring', label: 'Hiring', icon: UserPlus },
       { id: 'settings', label: 'Settings', icon: Settings },
@@ -196,6 +198,11 @@ export default function AdminDashboard() {
   const [appSettingsSaving, setAppSettingsSaving] = useState(false);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [appSettingsMsg, setAppSettingsMsg] = useState({ type: '', text: '' });
+  const [websiteMsg, setWebsiteMsg] = useState({ type: '', text: '' });
+  const [websiteSaving, setWebsiteSaving] = useState(false);
+  const [websiteUploading, setWebsiteUploading] = useState(false);
+  const [websiteDeletingId, setWebsiteDeletingId] = useState(null);
+  const websiteFileInputRef = useRef(null);
 
   const totals = useMemo(() => calculateInvoiceTotals(items), [items]);
   const quotationTotals = useMemo(() => calculateInvoiceTotals(quotationForm.items || []), [quotationForm.items]);
@@ -1017,10 +1024,11 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (activeSection !== 'settings' || !API_BASE) return;
+    if (!API_BASE || (activeSection !== 'settings' && activeSection !== 'website')) return;
     let cancelled = false;
     setAppSettingsLoading(true);
     setAppSettingsMsg({ type: '', text: '' });
+    setWebsiteMsg({ type: '', text: '' });
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/api/settings/app`, {
@@ -1030,10 +1038,26 @@ export default function AdminDashboard() {
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (!res.ok) throw new Error(data.message || 'Failed to load settings');
-        setAppSettings(data.settings);
+        const sc = data.settings?.siteContent && typeof data.settings.siteContent === 'object'
+          ? data.settings.siteContent
+          : {};
+        setAppSettings({
+          ...data.settings,
+          siteContent: {
+            heroHeadline: '',
+            heroSubtext: '',
+            heroTrustLine: '',
+            seoHomeDescription: '',
+            heroBackgroundImage: '',
+            ...sc,
+          },
+        });
         setMailTransportConfigured(!!data.mailTransportConfigured);
       } catch (err) {
-        if (!cancelled) setAppSettingsMsg({ type: 'error', text: err.message || 'Failed to load email settings.' });
+        if (!cancelled) {
+          setAppSettingsMsg({ type: 'error', text: err.message || 'Failed to load email settings.' });
+          setWebsiteMsg({ type: 'error', text: err.message || 'Failed to load workspace settings.' });
+        }
       } finally {
         if (!cancelled) setAppSettingsLoading(false);
       }
@@ -1089,6 +1113,127 @@ export default function AdminDashboard() {
       setAppSettingsMsg({ type: 'error', text: err.message || 'Test send failed.' });
     } finally {
       setTestEmailLoading(false);
+    }
+  };
+
+  const updateSiteContentField = (key, value) => {
+    setAppSettings((prev) => {
+      if (!prev) return prev;
+      const sc = prev.siteContent && typeof prev.siteContent === 'object' ? prev.siteContent : {};
+      return { ...prev, siteContent: { ...sc, [key]: value } };
+    });
+  };
+
+  const handleSaveWebsiteContent = async (e) => {
+    e?.preventDefault?.();
+    if (!API_BASE || !appSettings) return;
+    setWebsiteSaving(true);
+    setWebsiteMsg({ type: '', text: '' });
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/app`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({ siteContent: appSettings.siteContent || {} }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to save');
+      const sc = data.settings?.siteContent && typeof data.settings.siteContent === 'object'
+        ? data.settings.siteContent
+        : {};
+      setAppSettings({
+        ...data.settings,
+        siteContent: {
+          heroHeadline: '',
+          heroSubtext: '',
+          heroTrustLine: '',
+          seoHomeDescription: '',
+          heroBackgroundImage: '',
+          ...sc,
+        },
+      });
+      setMailTransportConfigured(!!data.mailTransportConfigured);
+      setWebsiteMsg({ type: 'success', text: 'Website content saved. The homepage will use these values when published.' });
+    } catch (err) {
+      setWebsiteMsg({ type: 'error', text: err.message || 'Save failed.' });
+    } finally {
+      setWebsiteSaving(false);
+    }
+  };
+
+  const handleWebsiteFileSelected = async (e) => {
+    const file = e.target?.files?.[0];
+    e.target.value = '';
+    if (!file || !API_BASE) return;
+    setWebsiteUploading(true);
+    setWebsiteMsg({ type: '', text: '' });
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API_BASE}/api/settings/app/media`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Upload failed');
+      const sc = data.settings?.siteContent && typeof data.settings.siteContent === 'object'
+        ? data.settings.siteContent
+        : {};
+      setAppSettings({
+        ...data.settings,
+        siteContent: {
+          heroHeadline: '',
+          heroSubtext: '',
+          heroTrustLine: '',
+          seoHomeDescription: '',
+          heroBackgroundImage: '',
+          ...sc,
+        },
+      });
+      setMailTransportConfigured(!!data.mailTransportConfigured);
+      setWebsiteMsg({ type: 'success', text: 'Image uploaded. Copy the URL or assign it as the hero background.' });
+    } catch (err) {
+      setWebsiteMsg({ type: 'error', text: err.message || 'Upload failed.' });
+    } finally {
+      setWebsiteUploading(false);
+    }
+  };
+
+  const handleDeleteWebsiteImage = async (id) => {
+    if (!API_BASE || !id) return;
+    if (!window.confirm('Remove this image from the library? Links using it may break.')) return;
+    setWebsiteDeletingId(id);
+    setWebsiteMsg({ type: '', text: '' });
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/app/media/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Delete failed');
+      const sc = data.settings?.siteContent && typeof data.settings.siteContent === 'object'
+        ? data.settings.siteContent
+        : {};
+      setAppSettings({
+        ...data.settings,
+        siteContent: {
+          heroHeadline: '',
+          heroSubtext: '',
+          heroTrustLine: '',
+          seoHomeDescription: '',
+          heroBackgroundImage: '',
+          ...sc,
+        },
+      });
+      setMailTransportConfigured(!!data.mailTransportConfigured);
+      setWebsiteMsg({ type: 'success', text: 'Image removed.' });
+    } catch (err) {
+      setWebsiteMsg({ type: 'error', text: err.message || 'Delete failed.' });
+    } finally {
+      setWebsiteDeletingId(null);
     }
   };
 
@@ -1149,6 +1294,7 @@ export default function AdminDashboard() {
                   {activeSection === 'projects' && 'Projects'}
                   {activeSection === 'quotations' && 'Quotation Generator'}
                   {activeSection === 'clients' && 'Clients'}
+                  {activeSection === 'website' && 'Website'}
                   {activeSection === 'reports' && 'Reports'}
                   {activeSection === 'hiring' && 'Hiring & team'}
                   {activeSection === 'settings' && 'Settings'}
@@ -1160,6 +1306,7 @@ export default function AdminDashboard() {
                   {activeSection === 'projects' && 'Create and manage projects assigned to your clients.'}
                   {activeSection === 'quotations' && 'Create and download client quotations with line items and terms.'}
                   {activeSection === 'clients' && 'Manage your client relationships and project details.'}
+                  {activeSection === 'website' && 'Update homepage copy and manage images served from your API (live site reads public content).'}
                   {activeSection === 'reports' && 'Export a consolidated business snapshot: revenue, invoices, hiring, and tasks.'}
                   {activeSection === 'hiring' && 'Post roles, track candidates, invite employees, and assign internal tasks.'}
                   {activeSection === 'settings' && 'Configure your workspace preferences and billing details.'}
@@ -3328,6 +3475,210 @@ export default function AdminDashboard() {
 
             {activeSection === 'reports' && <AdminReportsSection onError={(msg) => setError(msg || '')} />}
             {activeSection === 'hiring' && <AdminHiringSection onError={(msg) => setError(msg || '')} />}
+
+            {activeSection === 'website' && (
+              <div className="animate-fade-in-up w-full max-w-7xl mx-auto space-y-6">
+                {appSettingsLoading && (
+                  <p className="text-sm text-slate-500 py-6">Loading website settings…</p>
+                )}
+                {!appSettingsLoading && appSettings && (
+                  <>
+                    {/* Content */}
+                    <div className="admin-card-glass rounded-2xl p-5 sm:p-8 border border-primary-200/40">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-6 pb-4 border-b border-primary-100">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0">
+                            <BookOpen className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h2 className="text-base font-bold text-primary-950">Homepage content</h2>
+                            <p className="text-xs text-primary-500 mt-0.5">
+                              Text shown on the public home page when filled. Leave fields blank to keep the built-in layout and copy.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <form onSubmit={handleSaveWebsiteContent} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">SEO — meta description (home)</label>
+                          <textarea
+                            value={appSettings.siteContent?.seoHomeDescription || ''}
+                            onChange={(e) => updateSiteContentField('seoHomeDescription', e.target.value)}
+                            rows={3}
+                            placeholder="Shown in search results when set…"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm resize-y min-h-[5rem]"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Hero headline</label>
+                          <textarea
+                            value={appSettings.siteContent?.heroHeadline || ''}
+                            onChange={(e) => updateSiteContentField('heroHeadline', e.target.value)}
+                            rows={4}
+                            placeholder="Plain text or multiple lines. When set, replaces the default animated headline."
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm resize-y min-h-[6rem]"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Hero supporting text</label>
+                          <textarea
+                            value={appSettings.siteContent?.heroSubtext || ''}
+                            onChange={(e) => updateSiteContentField('heroSubtext', e.target.value)}
+                            rows={3}
+                            placeholder="Paragraph under the headline…"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm resize-y min-h-[5rem]"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Hero trust line</label>
+                          <input
+                            type="text"
+                            value={appSettings.siteContent?.heroTrustLine || ''}
+                            onChange={(e) => updateSiteContentField('heroTrustLine', e.target.value)}
+                            placeholder="e.g. Starting from ₹10,999 | Delivered in 3–5 days"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Hero background image</label>
+                          <select
+                            value={appSettings.siteContent?.heroBackgroundImage || ''}
+                            onChange={(e) => updateSiteContentField('heroBackgroundImage', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
+                          >
+                            <option value="">Default (built-in site image)</option>
+                            {(appSettings.mediaImages || []).map((img) => (
+                              <option key={img.id} value={`/uploads/${img.storedName}`}>
+                                {img.originalName || img.storedName}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[11px] text-slate-500">
+                            Choose an uploaded image from the library below, or leave default.
+                          </p>
+                        </div>
+                        {websiteMsg.text && (
+                          <p
+                            className={`text-sm flex items-center gap-2 ${
+                              websiteMsg.type === 'success' ? 'text-emerald-700' : 'text-red-600'
+                            }`}
+                          >
+                            {websiteMsg.type === 'success' ? (
+                              <CheckCircle className="w-4 h-4 shrink-0" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                            )}
+                            {websiteMsg.text}
+                          </p>
+                        )}
+                        <button
+                          type="submit"
+                          disabled={websiteSaving}
+                          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
+                        >
+                          {websiteSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                          Save homepage content
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Media library */}
+                    <div className="admin-card-glass rounded-2xl p-5 sm:p-8 border border-primary-200/40">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b border-primary-100">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center shrink-0">
+                            <ImagePlus className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h2 className="text-base font-bold text-primary-950">Image library</h2>
+                            <p className="text-xs text-primary-500 mt-0.5">
+                              Upload PNG, JPG, WebP, GIF, or SVG (max 8&nbsp;MB). Files are stored on the API server and served from{' '}
+                              <code className="text-[10px] bg-slate-100 px-1 rounded">/uploads/</code>.
+                              On cloud hosts without persistent disk, re-upload after redeploys or use external CDN URLs in content later.
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <input
+                            ref={websiteFileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                            className="hidden"
+                            onChange={handleWebsiteFileSelected}
+                          />
+                          <button
+                            type="button"
+                            disabled={websiteUploading}
+                            onClick={() => websiteFileInputRef.current?.click()}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
+                          >
+                            {websiteUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                            Upload image
+                          </button>
+                        </div>
+                      </div>
+                      {(!(appSettings.mediaImages || []).length) ? (
+                        <p className="text-sm text-slate-500 py-4 border border-dashed border-slate-200 rounded-xl text-center">
+                          No images yet. Upload one to get a public URL for the hero or marketing pages.
+                        </p>
+                      ) : (
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {(appSettings.mediaImages || []).map((img) => {
+                            const publicUrl = `${API_BASE}/uploads/${img.storedName}`;
+                            return (
+                              <li
+                                key={img.id}
+                                className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col"
+                              >
+                                <div className="aspect-video bg-slate-100 flex items-center justify-center overflow-hidden">
+                                  <img
+                                    src={publicUrl}
+                                    alt=""
+                                    className="max-h-full max-w-full object-contain"
+                                  />
+                                </div>
+                                <div className="p-3 flex flex-col gap-2 flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-slate-800 truncate" title={img.originalName}>
+                                    {img.originalName || img.storedName}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500 font-mono break-all">{publicUrl}</p>
+                                  <div className="flex flex-wrap gap-2 mt-auto pt-1">
+                                    <button
+                                      type="button"
+                                      className="text-xs font-semibold text-primary-700 hover:text-primary-900 px-2 py-1 rounded-lg bg-primary-50"
+                                      onClick={() => {
+                                        navigator.clipboard?.writeText(publicUrl).then(() => {
+                                          setWebsiteMsg({ type: 'success', text: 'URL copied to clipboard.' });
+                                        }).catch(() => setWebsiteMsg({ type: 'error', text: 'Could not copy URL.' }));
+                                      }}
+                                    >
+                                      Copy URL
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={websiteDeletingId === img.id}
+                                      className="text-xs font-semibold text-red-700 hover:text-red-900 px-2 py-1 rounded-lg bg-red-50 disabled:opacity-50 inline-flex items-center gap-1"
+                                      onClick={() => handleDeleteWebsiteImage(img.id)}
+                                    >
+                                      {websiteDeletingId === img.id ? (
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-3 h-3" />
+                                      )}
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Settings Section — main column + sticky sidebar on large screens */}
             {activeSection === 'settings' && (

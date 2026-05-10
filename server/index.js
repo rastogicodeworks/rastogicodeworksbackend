@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
@@ -17,8 +19,12 @@ import { employeeTasksRouter } from './routes/employeeTasks.js';
 import { employeesRouter } from './routes/employees.js';
 import { careersRouter } from './routes/careers.js';
 import { appSettingsRouter } from './routes/appSettings.js';
+import { siteContentPublicRouter } from './routes/siteContent.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -74,6 +80,14 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
 
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+    fallthrough: true,
+  }),
+);
+
 app.get('/api/health', (_, res) => {
   res.json({
     status: 'ok',
@@ -86,6 +100,7 @@ app.get('/api/health', (_, res) => {
 app.use('/api/careers', careersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/settings/app', appSettingsRouter);
+app.use('/api/site-content', siteContentPublicRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/clients', clientsRouter);
