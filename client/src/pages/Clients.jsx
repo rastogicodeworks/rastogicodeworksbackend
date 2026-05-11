@@ -13,76 +13,165 @@ const clientLogos = [
   'Vimaanna',
   'ONX STUDIO',
   'thenote.earth',
-  'Rhine Advisory'
+  'Rhine Advisory',
+  'Offsync',
+  'Dwivedi Gupta & Co.',
+  'Many more coming soon',
 ];
 
-/** Featured work  -  same design as Home "Selected Work" (image cards with hover overlay) */
-const featuredWork = [
+/** Featured work grouped for the Clients page portfolio. */
+const projectCategories = [
   {
-    clientName: 'Nb Aurum Solutions',
-    title: 'Professional Finance Dashboard For Startup',
-    url: 'https://nbaurum.com',
-    domain: 'nbaurum.com',
-    image: '/image.png',
-    alt: 'Professional Finance Dashboard For Startup  -  Nb Aurum Solutions'
+    id: 'websites',
+    title: 'Website projects',
+    description: 'Marketing sites and storefronts built for performance, clarity, and conversion.',
+    subsections: [
+      {
+        id: 'ecommerce',
+        heading: 'E-commerce',
+        projects: [
+          {
+            clientName: 'DataBot Labs',
+            title: 'Robotics & Automation E-Commerce Platform',
+            url: 'https://databot-labs.com',
+            domain: 'databot-labs.com',
+            image: '/Image5.png',
+            alt: 'DataBot Labs  -  Robotics & Automation E-Commerce Platform',
+          },
+          {
+            clientName: 'Aniyah',
+            title: 'Modern and Women Product Sell Focus Ecommerce Website',
+            url: 'https://kurtis-ecommerce-2025.vercel.app/',
+            domain: 'kurtis-ecommerce-2025.vercel.app',
+            image: '/Image6.png',
+            alt: 'Aniyah  -  Modern and Women Product Sell Focus Ecommerce Website',
+          },
+        ],
+      },
+      {
+        id: 'dynamic',
+        heading: 'Dynamic',
+        projects: [
+          {
+            clientName: 'YD Advisory',
+            title: 'Revamped Website For Established Finance MNC',
+            url: 'https://ydadvisory.ae',
+            domain: 'ydadvisory.ae',
+            image: '/image2.png',
+            alt: 'Revamped Website For Established Finance MNC  -  YD Advisory',
+          },
+          {
+            clientName: 'Rastogi & Associates',
+            title: 'Professional Website For Established Taxation and Law Firm',
+            url: 'https://rastogiassociates.com/',
+            domain: 'rastogiassociates.com',
+            image: '/image3.png',
+            alt: 'Professional Website For Established Taxation and Law Firm  -  Rastogi & Associates',
+          },
+          {
+            clientName: 'ONX STUDIO',
+            title: 'Creative Studio and Brand Experience',
+            url: 'https://onxstudio.com',
+            domain: 'onxstudio.com',
+            image: '/onx.png',
+            alt: 'ONX STUDIO  -  Creative Studio and Brand Experience',
+          },
+          {
+            clientName: 'thenote.earth',
+            title: 'Sustainability and Impact Platform',
+            url: 'https://thenote.earth',
+            domain: 'thenote.earth',
+            image: '/note.png',
+            alt: 'World\'s First Zero Plastic Pen  -  thenote.earth',
+          },
+        ],
+      },
+    ],
   },
   {
-    clientName: 'YD Advisory',
-    title: 'Revamped Website For Established Finance MNC',
-    url: 'https://ydadvisory.ae',
-    domain: 'ydadvisory.ae',
-    image: '/image2.png',
-    alt: 'Revamped Website For Established Finance MNC  -  YD Advisory'
+    id: 'dashboard-crm',
+    title: 'Dashboard & CRM',
+    description: 'Operational dashboards and client-facing tools for finance and business teams.',
+    subsections: [
+      {
+        id: 'dashboard-crm-work',
+        projects: [
+          {
+            clientName: 'Nb Aurum Solutions',
+            title: 'Professional Finance Dashboard For Startup',
+            url: 'https://nbaurum.com',
+            domain: 'nbaurum.com',
+            image: '/image.png',
+            alt: 'Professional Finance Dashboard For Startup  -  Nb Aurum Solutions',
+          },
+          {
+            clientName: 'VIMAANNA',
+            title: 'Admin Dashboard with Question Reports',
+            url: 'https://vimaanna.com',
+            domain: 'vimaanna.com',
+            image: '/vimaanna.png',
+            alt: 'VIMAANNA admin dashboard with question reports and insights',
+          },
+        ],
+      },
+    ],
   },
   {
-    clientName: 'Rastogi & Associates',
-    title: 'Professional Website For Established Taxation and Law Firm',
-    url: 'https://rastogiassociates.com/',
-    domain: 'rastogiassociates.com',
-    image: '/image3.png',
-    alt: 'Professional Website For Established Taxation and Law Firm  -  Rastogi & Associates'
+    id: 'application-setups',
+    title: 'Application setups',
+    description: 'Product platforms with workflows, accounts, and integrations beyond a brochure site.',
+    subsections: [
+      {
+        id: 'application-setups-work',
+        projects: [
+          {
+            clientName: 'OffSync Technologies',
+            title: 'Executive Mobile Workforce Dashboard',
+            url: '#',
+            domain: 'Mobile application',
+            image: '/application.png',
+            alt: 'Executive mobile workforce dashboard for OffSync Technologies',
+          },
+          {
+            clientName: 'Dhoondh',
+            title: 'Job Portal For Established Companies and New Industry Professional Leaders',
+            url: 'https://dhoondh.in',
+            domain: 'dhoondh.in',
+            image: '/image4.png',
+            alt: 'Job Portal For Established Companies and New Industry Professional Leaders  -  Dhoondh',
+          },
+        ],
+      },
+    ],
   },
-  {
-    clientName: 'Dhoondh',
-    title: 'Job Portal For Established Companies and New Industry Professional Leaders',
-    url: 'https://dhoondh.in',
-    domain: 'dhoondh.in',
-    image: '/image4.png',
-    alt: 'Job Portal For Established Companies and New Industry Professional Leaders  -  Dhoondh'
-  },
-  {
-    clientName: 'thenote.earth',
-    title: 'Sustainability and Impact Platform',
-    url: 'https://thenote.earth',
-    domain: 'thenote.earth',
-    image: '/note.png',
-    alt: 'World\'s First Zero Plastic Pen  -  thenote.earth'
-  },
-  {
-    clientName: 'ONX STUDIO',
-    title: 'Creative Studio and Brand Experience',
-    url: 'https://onxstudio.com',
-    domain: 'onxstudio.com',
-    image: '/onx.png',
-    alt: 'ONX STUDIO  -  Creative Studio and Brand Experience'
-  },
-  {
-    clientName: 'DataBot Labs',
-    title: 'Robotics & Automation E-Commerce Platform',
-    url: 'https://databot-labs.com',
-    domain: 'databot-labs.com',
-    image: '/Image5.png',
-    alt: 'DataBot Labs  -  Robotics & Automation E-Commerce Platform'
-  },
-  {
-    clientName: 'Aniyah',
-    title: 'Modern and Women Product Sell Focus Ecommerce Website',
-    url: '#',
-    domain: 'https://kurtis-ecommerce-2025.vercel.app/',
-    image: '/Image6.png',
-    alt: 'Aniyah  -  Modern and Women Product Sell Focus Ecommerce Website'
-  }
 ];
+
+function ProjectCard({ project }) {
+  return (
+    <a
+      href={project.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 block"
+    >
+      <div className="aspect-[16/10] overflow-hidden bg-slate-100 relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+        <img
+          src={project.image}
+          alt={project.alt}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        <div className="absolute bottom-0 left-0 p-8 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-20">
+          <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-medium mb-3">
+            {project.clientName}
+          </span>
+          <h3 className="text-2xl font-bold text-white mb-2">{project.title}</h3>
+          <p className="text-white/80 text-sm">{project.domain}</p>
+        </div>
+      </div>
+    </a>
+  );
+}
 
 const whyStay = [
   'Senior engineers who own work from design to deployment.',
@@ -207,32 +296,52 @@ export default function Clients() {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 stagger-children">
-            {featuredWork.map((project) => (
-              <a
-                key={project.clientName}
-                href={project.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 block"
-              >
-                <div className="aspect-[16/10] overflow-hidden bg-slate-100 relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
-                  <img
-                    src={project.image}
-                    alt={project.alt}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute bottom-0 left-0 p-8 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-20">
-                    <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-medium mb-3">
-                      {project.clientName}
-                    </span>
-                    <h3 className="text-2xl font-bold text-white mb-2">{project.title}</h3>
-                    <p className="text-white/80 text-sm">{project.domain}</p>
-                  </div>
+          <div className="space-y-16 md:space-y-20">
+            {projectCategories.map((category) => (
+              <div key={category.id}>
+                <div className="mb-8 md:mb-10">
+                  <h3 className="text-2xl md:text-3xl font-bold text-primary-950 mb-3">
+                    {category.title}
+                  </h3>
+                  <p className="text-base md:text-lg text-slate-600 max-w-3xl">
+                    {category.description}
+                  </p>
                 </div>
-              </a>
+
+                <div className="space-y-10 md:space-y-12">
+                  {category.subsections.map((subsection) => (
+                    <div key={subsection.id}>
+                      {subsection.heading ? (
+                        <p className="text-sm font-semibold text-primary-600 uppercase tracking-widest mb-5">
+                          {subsection.heading}
+                        </p>
+                      ) : null}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 stagger-children">
+                        {subsection.projects.map((project) => (
+                          <ProjectCard key={`${subsection.id}-${project.clientName}`} project={project} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
+          </div>
+
+          <div className="mt-16 md:mt-20 text-center">
+            <h3 className="text-2xl md:text-3xl font-bold text-primary-950 mb-4">
+              Now let us know how we can help you
+            </h3>
+            <p className="text-base md:text-lg text-slate-600 max-w-2xl mx-auto mb-8">
+              Planning a website, dashboard, or product build? Tell us what you are working on and we will reply with practical next steps.
+            </p>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-primary-600 text-white font-bold text-base shadow-lg shadow-primary-500/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 transition-all duration-300"
+            >
+              Start a conversation
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Link>
           </div>
         </div>
       </section>

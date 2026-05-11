@@ -17,6 +17,7 @@ const logos = [
   'Rhine Advisory',
   'Sintora Ventures',
   'Onx Studio',
+  'Offsync',
   'Dwivedi Gupta & Co.',
   'Vimaanna - DGCA',
   'Many More Startups…',
