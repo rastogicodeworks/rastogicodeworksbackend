@@ -20,6 +20,7 @@ import { employeesRouter } from './routes/employees.js';
 import { careersRouter } from './routes/careers.js';
 import { appSettingsRouter } from './routes/appSettings.js';
 import { siteContentPublicRouter } from './routes/siteContent.js';
+import { quotationsRouter } from './routes/quotations.js';
 
 dotenv.config();
 
@@ -102,6 +103,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/settings/app', appSettingsRouter);
 app.use('/api/site-content', siteContentPublicRouter);
 app.use('/api/invoices', invoicesRouter);
+app.use('/api/quotations', quotationsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/clients', clientsRouter);
 app.use('/api/projects', projectsRouter);

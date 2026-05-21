@@ -50,17 +50,30 @@ import {
   ExternalLink,
   BookOpen,
   Globe,
+  Save,
 } from 'lucide-react';
 import { downloadInvoicePdf } from '../utils/invoicePdf.js';
 import { downloadQuotationPdf } from '../utils/quotationPdf.js';
 import {
-  getMonthlyDefaultRemarks,
-  getQuotationMonthlyRemarks,
   buildInvoiceRemarkPreset,
   buildQuotationRemarkPreset,
   INVOICE_REMARK_CHIPS,
   QUOTATION_REMARK_CHIPS,
 } from '../utils/documentRemarks.js';
+import {
+  QUOTATION_SCOPE_TYPES,
+  getScopeDefaultText,
+} from '../utils/quotationScope.js';
+import {
+  PROJECT_DELIVERY_MODES,
+  getProjectDeliveryMode,
+  applyProjectModeToQuotation,
+} from '../utils/quotationProjectMode.js';
+import {
+  formatPaymentTermsForPdf,
+  getQuotationPaymentTermRows,
+  parsePaymentTermsFromText,
+} from '../utils/quotationPaymentTerms.js';
 import DashboardNavbar from '../components/DashboardNavbar';
 import AdminDesktopTopBar from '../components/AdminDesktopTopBar';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
@@ -176,13 +189,30 @@ export default function AdminDashboard() {
     serviceId: '',
     projectTitle: '',
     billingAddress: '',
+    projectDeliveryMode: '',
+    phaseCount: '',
+    projectModeDetails: '',
     quoteDate: new Date().toISOString().slice(0, 10),
     validUntil: '',
     deliveryDays: '',
+    deliveryUnit: 'days',
+    scopeType: '',
+    scopeDetails: '',
     requirements: '',
     notes: '',
     items: [{ ...emptyItem }],
   });
+  const [savedQuotations, setSavedQuotations] = useState([]);
+  const [savedQuotationsCount, setSavedQuotationsCount] = useState(0);
+  const [quotationsListLoading, setQuotationsListLoading] = useState(false);
+  const [quotationSaving, setQuotationSaving] = useState(false);
+  const [quotationMsg, setQuotationMsg] = useState({ type: '', text: '' });
+  const [quotationDeletingId, setQuotationDeletingId] = useState(null);
+  const [editingQuotationId, setEditingQuotationId] = useState(null);
+  const [editingQuoteNumber, setEditingQuoteNumber] = useState('');
+  const quotationFormRef = useRef(null);
+  const [quotationPaymentTerms, setQuotationPaymentTerms] = useState([]);
+  const [showQuotationPaymentTerms, setShowQuotationPaymentTerms] = useState(false);
 
   // Change password (in Settings section)
   const [changePwForm, setChangePwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -206,18 +236,32 @@ export default function AdminDashboard() {
 
   const totals = useMemo(() => calculateInvoiceTotals(items), [items]);
   const quotationTotals = useMemo(() => calculateInvoiceTotals(quotationForm.items || []), [quotationForm.items]);
+  const quotationTermsTotalPct = quotationPaymentTerms.reduce((s, t) => s + (Number(t.percentage) || 0), 0);
+  const hasQuotationPaymentTerms = quotationPaymentTerms.some((t) => Number(t?.percentage) > 0);
+  const quotationPaymentTermsText = useMemo(
+    () => formatPaymentTermsForPdf(quotationPaymentTerms, quotationTotals.total),
+    [quotationPaymentTerms, quotationTotals.total],
+  );
+  const quotationPaymentTermRows = useMemo(
+    () => getQuotationPaymentTermRows(quotationPaymentTerms),
+    [quotationPaymentTerms],
+  );
 
-  useEffect(() => {
-    if (editingInvoiceId) return;
-    setNotes((prev) => (prev.trim() === '' ? getMonthlyDefaultRemarks(invoiceDate) : prev));
-  }, [invoiceDate, editingInvoiceId]);
-
-  useEffect(() => {
-    setQuotationForm((prev) => {
-      if ((prev.notes || '').trim() !== '') return prev;
-      return { ...prev, notes: getQuotationMonthlyRemarks(prev.quoteDate) };
-    });
-  }, [quotationForm.quoteDate]);
+  const addQuotationPaymentTerm = () => setQuotationPaymentTerms((prev) => [...prev, { ...emptyTerm }]);
+  const removeQuotationPaymentTerm = (i) => setQuotationPaymentTerms((prev) => prev.filter((_, idx) => idx !== i));
+  const handleQuotationTermChange = (i, field, value) => {
+    setQuotationPaymentTerms((prev) => prev.map((t, idx) => {
+      if (idx !== i) return t;
+      if (field === 'status') {
+        return { ...t, status: value, partialAmount: value === 'partially_paid' ? t.partialAmount : '' };
+      }
+      return { ...t, [field]: value };
+    }));
+  };
+  const applyQuotationPaymentPreset = (preset) => {
+    setQuotationPaymentTerms(preset.terms.map((t) => ({ ...t })));
+    setShowQuotationPaymentTerms(true);
+  };
 
   const applyInvoiceRemarkPreset = (presetId) => {
     const text = buildInvoiceRemarkPreset(presetId, { invoiceDate, dueDate, clientName });
@@ -287,6 +331,196 @@ export default function AdminDashboard() {
     setQuotationForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
   };
 
+  const buildQuotationSavePayload = (quoteNumber, payloadItems) => ({
+    quoteNumber,
+    clientName: quotationForm.clientName.trim(),
+    companyName: quotationForm.companyName.trim(),
+    projectTitle: quotationForm.projectTitle.trim(),
+    billingAddress: quotationForm.billingAddress.trim(),
+    serviceId: quotationForm.serviceId || '',
+    quoteDate: quotationForm.quoteDate,
+    validUntil: quotationForm.validUntil,
+    deliveryDays: quotationForm.deliveryDays,
+    deliveryUnit: quotationForm.deliveryUnit,
+    projectDeliveryMode: quotationForm.projectDeliveryMode,
+    phaseCount: quotationForm.phaseCount,
+    projectModeDetails: quotationForm.projectModeDetails,
+    scopeType: quotationForm.scopeType,
+    scopeDetails: quotationForm.scopeDetails,
+    requirements: quotationForm.requirements,
+    paymentTerms: quotationPaymentTermsText,
+    notes: quotationForm.notes,
+    items: payloadItems,
+    subtotal: quotationTotals.subtotal,
+    total: quotationTotals.total,
+    hasCompanyLogo: !!quotationForm.companyLogoDataUrl,
+    hasClientLogo: !!quotationForm.clientLogoDataUrl,
+  });
+
+  const loadSavedQuotations = async () => {
+    if (!API_BASE) return;
+    setQuotationsListLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/quotations`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (res.status === 401) {
+        clearAuthToken();
+        localStorage.removeItem('isAdmin');
+        window.location.href = '/login';
+        return;
+      }
+      if (!res.ok) throw new Error('Failed to load saved quotations');
+      const data = await res.json();
+      setSavedQuotations(data.quotations || []);
+      setSavedQuotationsCount(data.count ?? (data.quotations || []).length);
+    } catch (err) {
+      setSavedQuotations([]);
+      setSavedQuotationsCount(0);
+      setError(err.message || 'Could not load quotation history.');
+    } finally {
+      setQuotationsListLoading(false);
+    }
+  };
+
+  const clearQuotationEditMode = () => {
+    setEditingQuotationId(null);
+    setEditingQuoteNumber('');
+  };
+
+  const saveQuotationRecord = async (quoteNumber, payloadItems) => {
+    const isUpdate = !!editingQuotationId;
+    const url = isUpdate
+      ? `${API_BASE}/api/quotations/${editingQuotationId}`
+      : `${API_BASE}/api/quotations`;
+    const res = await fetch(url, {
+      method: isUpdate ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      credentials: 'include',
+      body: JSON.stringify(buildQuotationSavePayload(quoteNumber, payloadItems)),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || `Failed to ${isUpdate ? 'update' : 'save'} quotation record.`);
+    }
+    const data = await res.json();
+    setSavedQuotationsCount(data.count ?? savedQuotationsCount);
+    if (data.quotation) {
+      setSavedQuotations((prev) => {
+        const rest = prev.filter((q) => q._id !== data.quotation._id);
+        return [data.quotation, ...rest];
+      });
+    } else {
+      await loadSavedQuotations();
+    }
+    if (isUpdate) clearQuotationEditMode();
+    return data;
+  };
+
+  const handleEditSavedQuotation = (record) => {
+    if (!record) return;
+    const items = (record.items || []).length > 0
+      ? record.items.map((i) => ({
+        description: i.description || '',
+        quantity: i.quantity ?? 1,
+        price: i.price ?? 0,
+      }))
+      : [{ ...emptyItem }];
+    const parsedTerms = parsePaymentTermsFromText(record.paymentTerms || '');
+    const terms = parsedTerms.length > 0
+      ? parsedTerms.map((t) => ({
+        ...emptyTerm,
+        label: t.label,
+        percentage: String(t.percentage),
+      }))
+      : [];
+
+    setEditingQuotationId(record._id);
+    setEditingQuoteNumber(record.quoteNumber || '');
+    setQuotationForm({
+      clientName: record.clientName || '',
+      companyName: record.companyName || 'Rastogi Codeworks',
+      companyLogoDataUrl: '',
+      clientLogoDataUrl: '',
+      serviceId: record.serviceId || '',
+      projectTitle: record.projectTitle || '',
+      billingAddress: record.billingAddress || '',
+      projectDeliveryMode: record.projectDeliveryMode || '',
+      phaseCount: record.phaseCount || '',
+      projectModeDetails: record.projectModeDetails || '',
+      quoteDate: record.quoteDate || new Date().toISOString().slice(0, 10),
+      validUntil: record.validUntil || '',
+      deliveryDays: record.deliveryDays || '',
+      deliveryUnit: record.deliveryUnit === 'months' ? 'months' : 'days',
+      scopeType: record.scopeType || '',
+      scopeDetails: record.scopeDetails || '',
+      requirements: record.requirements || '',
+      notes: record.notes || '',
+      items,
+    });
+    setQuotationPaymentTerms(terms);
+    setShowQuotationPaymentTerms(terms.length > 0);
+    setQuotationMsg({
+      type: 'success',
+      text: `Editing ${record.quoteNumber}. Re-upload logos if needed — they are not stored with saved quotations.`,
+    });
+    setError('');
+    requestAnimationFrame(() => {
+      quotationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleRedownloadSavedQuotation = async (record) => {
+    try {
+      await downloadQuotationPdf({
+        clientName: record.clientName,
+        companyName: record.companyName,
+        projectTitle: record.projectTitle,
+        billingAddress: record.billingAddress,
+        quoteDate: record.quoteDate,
+        validUntil: record.validUntil,
+        deliveryDays: record.deliveryDays,
+        deliveryUnit: record.deliveryUnit,
+        projectDeliveryMode: record.projectDeliveryMode,
+        phaseCount: record.phaseCount,
+        projectModeDetails: record.projectModeDetails,
+        scopeType: record.scopeType,
+        scopeDetails: record.scopeDetails,
+        requirements: record.requirements,
+        paymentTerms: record.paymentTerms,
+        notes: record.notes,
+        items: record.items || [],
+        totals: { subtotal: record.subtotal, total: record.total },
+        quoteId: record.quoteNumber,
+      });
+    } catch (err) {
+      setError(err?.message || 'Failed to download quotation PDF.');
+    }
+  };
+
+  const handleDeleteSavedQuotation = async (id) => {
+    if (!API_BASE || !id) return;
+    setQuotationDeletingId(id);
+    try {
+      const res = await fetch(`${API_BASE}/api/quotations/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete quotation');
+      const data = await res.json();
+      setSavedQuotations((prev) => prev.filter((q) => q._id !== id));
+      setSavedQuotationsCount(data.count ?? Math.max(0, savedQuotationsCount - 1));
+      if (editingQuotationId === id) clearQuotationEditMode();
+      setQuotationMsg({ type: 'success', text: 'Quotation record removed.' });
+    } catch (err) {
+      setError(err.message || 'Could not delete quotation.');
+    } finally {
+      setQuotationDeletingId(null);
+    }
+  };
+
   const handleDownloadQuotation = async (e) => {
     e?.preventDefault?.();
     const payloadItems = (quotationForm.items || []).filter((i) => i.description || i.quantity || i.price);
@@ -298,24 +532,48 @@ export default function AdminDashboard() {
       setError('Add at least one quotation item.');
       return;
     }
+    if (!API_BASE) {
+      setError('Backend not configured. Set VITE_API_URL for production.');
+      return;
+    }
+    setQuotationSaving(true);
+    setQuotationMsg({ type: '', text: '' });
     try {
-      await downloadQuotationPdf({
+      const { quoteId } = await downloadQuotationPdf({
+        quoteId: editingQuoteNumber || undefined,
         clientName: quotationForm.clientName.trim(),
         companyName: quotationForm.companyName.trim(),
         companyLogoDataUrl: quotationForm.companyLogoDataUrl || '',
         clientLogoDataUrl: quotationForm.clientLogoDataUrl || '',
         projectTitle: quotationForm.projectTitle.trim(),
         billingAddress: quotationForm.billingAddress.trim() || undefined,
+        projectDeliveryMode: quotationForm.projectDeliveryMode,
+        phaseCount: quotationForm.phaseCount,
+        projectModeDetails: quotationForm.projectModeDetails,
         quoteDate: quotationForm.quoteDate,
         validUntil: quotationForm.validUntil,
         deliveryDays: quotationForm.deliveryDays,
+        deliveryUnit: quotationForm.deliveryUnit,
+        scopeType: quotationForm.scopeType,
+        scopeDetails: quotationForm.scopeDetails,
         requirements: quotationForm.requirements,
+        paymentTerms: quotationPaymentTermsText,
+        paymentTermsInstallments: quotationPaymentTerms.filter((t) => Number(t?.percentage) > 0),
         items: payloadItems,
         notes: quotationForm.notes,
         totals: quotationTotals,
       });
+      const saveData = await saveQuotationRecord(quoteId, payloadItems);
+      setQuotationMsg({
+        type: 'success',
+        text: editingQuotationId
+          ? `Quotation updated (${quoteId}).`
+          : `Quotation saved (${quoteId}). Total generated: ${saveData?.count ?? savedQuotationsCount}.`,
+      });
     } catch (err) {
-      setError(err?.message || 'Failed to generate quotation PDF.');
+      setError(err?.message || 'Failed to generate or save quotation.');
+    } finally {
+      setQuotationSaving(false);
     }
   };
 
@@ -486,7 +744,7 @@ export default function AdminDashboard() {
     setDueDate('');
     setInvoiceStatus('unpaid');
     setItems([{ ...emptyItem }]);
-    setNotes(getMonthlyDefaultRemarks(todayIso));
+    setNotes('');
     setInvoiceClientEmail('');
     setLinkedPartialInvoiceId('');
     setPaymentTerms([]);
@@ -896,6 +1154,11 @@ export default function AdminDashboard() {
       .then((data) => setClients(data.clients || []))
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (activeSection !== 'quotations') return;
+    loadSavedQuotations();
   }, [activeSection]);
 
   const generatePassword = () => {
@@ -2303,13 +2566,12 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Notes & remark presets (month auto-fills when empty on new invoice) */}
+                      {/* Notes & remark presets */}
                       <div className="space-y-2">
                         <div className="ml-1 space-y-1">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Notes &amp; terms</label>
                           <p className="text-[11px] text-slate-500 leading-relaxed">
-                            For new invoices, remarks <span className="font-semibold text-slate-600">auto-match the invoice month</span> when this
-                            box is empty. Change the invoice date to refresh, or pick a preset below.
+                            Optional. Pick a preset below or type your own terms.
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -2323,13 +2585,6 @@ export default function AdminDashboard() {
                               {label}
                             </button>
                           ))}
-                          <button
-                            type="button"
-                            onClick={() => setNotes(getMonthlyDefaultRemarks(invoiceDate))}
-                            className="px-3 py-1.5 rounded-full border border-primary-200 bg-primary-50 text-xs font-semibold text-primary-800 hover:bg-primary-100 transition-colors"
-                          >
-                            Refresh monthly
-                          </button>
                           <button
                             type="button"
                             onClick={() => setNotes('')}
@@ -3153,11 +3408,138 @@ export default function AdminDashboard() {
 
             {/* ── Quotation Generator ── */}
             {activeSection === 'quotations' && (
-              <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60 animate-fade-in-up">
-                <h2 className="text-base font-bold text-primary-950 mb-5 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary-500" />
-                  Quotation Generator
-                </h2>
+              <div className="space-y-5 animate-fade-in-up">
+              <div className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary-500" />
+                      Saved quotations
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Every PDF you generate is stored here for tracking.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-primary-50 border border-primary-200 px-4 py-2 text-center min-w-[5.5rem]">
+                      <p className="text-2xl font-bold text-primary-800 leading-none">
+                        {quotationsListLoading ? '…' : savedQuotationsCount}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-primary-600 mt-1">Generated</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadSavedQuotations}
+                      disabled={quotationsListLoading}
+                      className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      title="Refresh list"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${quotationsListLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                {quotationMsg.text && (
+                  <p className={`text-sm mb-3 ${quotationMsg.type === 'success' ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {quotationMsg.text}
+                  </p>
+                )}
+                {quotationsListLoading && savedQuotations.length === 0 ? (
+                  <p className="text-sm text-slate-500 py-4">Loading quotation history…</p>
+                ) : savedQuotations.length === 0 ? (
+                  <p className="text-sm text-slate-500 py-4 rounded-xl bg-slate-50 border border-slate-100 px-4">
+                    No quotations saved yet. Generate your first PDF below — it will be counted automatically.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2.5">Quote #</th>
+                          <th className="px-3 py-2.5">Client</th>
+                          <th className="px-3 py-2.5 hidden md:table-cell">Project</th>
+                          <th className="px-3 py-2.5 text-right">Total</th>
+                          <th className="px-3 py-2.5 hidden sm:table-cell">Date</th>
+                          <th className="px-3 py-2.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {savedQuotations.map((q) => (
+                          <tr key={q._id} className="hover:bg-slate-50/80">
+                            <td className="px-3 py-2.5 font-semibold text-primary-900 whitespace-nowrap">{q.quoteNumber}</td>
+                            <td className="px-3 py-2.5 font-medium text-slate-800">{q.clientName}</td>
+                            <td className="px-3 py-2.5 text-slate-600 hidden md:table-cell max-w-[12rem] truncate">{q.projectTitle || '—'}</td>
+                            <td className="px-3 py-2.5 text-right font-medium text-slate-800 whitespace-nowrap">
+                              Rs. {(q.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-3 py-2.5 text-slate-500 hidden sm:table-cell whitespace-nowrap">
+                              {q.quoteDate || (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN') : '—')}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditSavedQuotation(q)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    editingQuotationId === q._id
+                                      ? 'text-primary-700 bg-primary-100'
+                                      : 'text-slate-500 hover:text-primary-600 hover:bg-primary-50'
+                                  }`}
+                                  title="Edit quotation"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRedownloadSavedQuotation(q)}
+                                  className="p-2 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-primary-50"
+                                  title="Download PDF again"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSavedQuotation(q._id)}
+                                  disabled={quotationDeletingId === q._id}
+                                  className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                  title="Remove record"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div
+                ref={quotationFormRef}
+                className="admin-card-glass rounded-2xl p-5 sm:p-6 border border-primary-200/60"
+              >
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary-500" />
+                    Quotation Generator
+                    {editingQuotationId && editingQuoteNumber && (
+                      <span className="text-xs font-bold text-primary-700 bg-primary-100 px-2.5 py-1 rounded-full">
+                        Editing {editingQuoteNumber}
+                      </span>
+                    )}
+                  </h2>
+                  {editingQuotationId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearQuotationEditMode();
+                        setQuotationMsg({ type: '', text: '' });
+                      }}
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50"
+                    >
+                      Cancel edit
+                    </button>
+                  )}
+                </div>
                 <form onSubmit={handleDownloadQuotation} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -3334,26 +3716,182 @@ export default function AdminDashboard() {
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Estimated Delivery (Days)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={quotationForm.deliveryDays}
-                        onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryDays: e.target.value }))}
-                        placeholder="e.g. 30"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
-                      />
-                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Billing Address</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Address</label>
                       <textarea
                         value={quotationForm.billingAddress}
                         onChange={(e) => setQuotationForm((p) => ({ ...p, billingAddress: e.target.value }))}
                         rows={2}
-                        placeholder="Street, City, State, PIN, Country"
+                        placeholder="Address - Street, City, State, PIN, Country"
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
                       />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Project type</label>
+                      <div className="relative">
+                        <select
+                          value={quotationForm.projectDeliveryMode}
+                          onChange={(e) => {
+                            setQuotationForm((p) => applyProjectModeToQuotation(p, e.target.value));
+                          }}
+                          className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                        >
+                          {PROJECT_DELIVERY_MODES.map((m) => (
+                            <option key={m.id || 'none'} value={m.id}>{m.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                      {quotationForm.projectDeliveryMode && (() => {
+                        const mode = getProjectDeliveryMode(quotationForm.projectDeliveryMode);
+                        return (
+                          <div className="space-y-2 rounded-xl border border-primary-100 bg-primary-50/40 p-3">
+                            {mode.showPhaseCount && (
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Number of phases</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="12"
+                                  value={quotationForm.phaseCount}
+                                  onChange={(e) => setQuotationForm((p) => ({ ...p, phaseCount: e.target.value }))}
+                                  placeholder="e.g. 3"
+                                  className="w-full sm:max-w-[8rem] px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                                />
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{mode.detailsLabel}</label>
+                              <textarea
+                                value={quotationForm.projectModeDetails}
+                                onChange={(e) => setQuotationForm((p) => ({ ...p, projectModeDetails: e.target.value }))}
+                                rows={mode.showPhaseCount ? 5 : 3}
+                                placeholder={mode.detailsPlaceholder}
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
+                              />
+                            </div>
+                            <div className="space-y-1 pt-1">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                {quotationForm.projectDeliveryMode === 'phased'
+                                  ? 'Total project timeline'
+                                  : 'Estimated delivery (full project)'}
+                              </label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="relative">
+                                  <select
+                                    value={quotationForm.deliveryUnit}
+                                    onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryUnit: e.target.value }))}
+                                    className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white cursor-pointer focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                                  >
+                                    <option value="days">Days</option>
+                                    <option value="months">Months</option>
+                                  </select>
+                                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quotationForm.deliveryDays}
+                                  onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryDays: e.target.value }))}
+                                  placeholder={mode.deliveryPlaceholder}
+                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                                  aria-label={`Timeline in ${quotationForm.deliveryUnit}`}
+                                />
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                {quotationForm.projectDeliveryMode === 'phased'
+                                  ? 'Editable — defaults to 4 months; change unit or duration anytime.'
+                                  : 'Editable — defaults to 45 days; change unit or duration anytime.'}
+                              </p>
+                            </div>
+                            <p className="text-[11px] text-slate-500">
+                              Scope fields below are pre-filled for this project type — edit as needed.
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    {!quotationForm.projectDeliveryMode && (
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Estimated Delivery</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="relative">
+                          <select
+                            value={quotationForm.deliveryUnit}
+                            onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryUnit: e.target.value }))}
+                            className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white cursor-pointer focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                          >
+                            <option value="days">Days</option>
+                            <option value="months">Months</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                        </div>
+                        <input
+                          type="number"
+                          min="1"
+                          value={quotationForm.deliveryDays}
+                          onChange={(e) => setQuotationForm((p) => ({ ...p, deliveryDays: e.target.value }))}
+                          placeholder={quotationForm.deliveryUnit === 'months' ? 'e.g. 3' : 'e.g. 30'}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                          aria-label={`Estimated delivery in ${quotationForm.deliveryUnit}`}
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {quotationForm.deliveryUnit === 'months'
+                          ? 'Enter how many months until delivery.'
+                          : 'Enter how many days until delivery.'}
+                      </p>
+                    </div>
+                    )}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Scope of work</label>
+                      <div className="relative">
+                        <select
+                          value={quotationForm.scopeType}
+                          onChange={(e) => {
+                            const nextType = e.target.value;
+                            const nextDefault = getScopeDefaultText(nextType);
+                            setQuotationForm((p) => {
+                              const prevDefault = getScopeDefaultText(p.scopeType).trim();
+                              const trimmed = (p.scopeDetails || '').trim();
+                              const userEdited = trimmed && trimmed !== prevDefault;
+                              return {
+                                ...p,
+                                scopeType: nextType,
+                                scopeDetails: !nextType
+                                  ? ''
+                                  : userEdited
+                                    ? p.scopeDetails
+                                    : nextDefault,
+                              };
+                            });
+                          }}
+                          className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900"
+                        >
+                          {QUOTATION_SCOPE_TYPES.map((t) => (
+                            <option key={t.id || 'none'} value={t.id}>{t.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                      {quotationForm.scopeType && (
+                        <textarea
+                          value={quotationForm.scopeDetails}
+                          onChange={(e) => setQuotationForm((p) => ({ ...p, scopeDetails: e.target.value }))}
+                          rows={quotationForm.scopeType === 'custom' ? 5 : 4}
+                          placeholder={
+                            quotationForm.scopeType === 'custom'
+                              ? 'Describe deliverables, boundaries, and what is in / out of scope…'
+                              : 'Edit scope details — shown in the PDF scope box…'
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none font-medium text-slate-900 resize-none"
+                        />
+                      )}
+                      <p className="text-[11px] text-slate-400">
+                        {quotationForm.scopeType
+                          ? 'Appears as a dedicated section in the quotation PDF.'
+                          : 'Optional. Choose a scope type to add a scope box to the PDF.'}
+                      </p>
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Requirements For The Project (From Client)</label>
@@ -3420,12 +3958,190 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Payment Terms — same pattern as Create Invoice */}
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowQuotationPaymentTerms((p) => !p)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-primary-50 hover:border-primary-300 transition-all"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <CreditCard className="w-4 h-4 text-primary-500" />
+                        Payment Terms
+                        {quotationPaymentTerms.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold">
+                            {quotationPaymentTerms.length} installment{quotationPaymentTerms.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </span>
+                      <ChevronUp className={`w-4 h-4 text-slate-400 transition-transform ${showQuotationPaymentTerms ? '' : 'rotate-180'}`} />
+                    </button>
+
+                    {showQuotationPaymentTerms && (
+                      <div className="space-y-4 px-1">
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Quick Presets</p>
+                          <div className="flex flex-wrap gap-2">
+                            {PAYMENT_PRESETS.map((preset) => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => applyQuotationPaymentPreset(preset)}
+                                className="px-3 py-1.5 rounded-lg bg-primary-50 border border-primary-200 text-primary-700 text-xs font-bold hover:bg-primary-100 hover:border-primary-300 transition-colors"
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {quotationPaymentTerms.length > 0 && (
+                          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm overflow-x-auto">
+                            <table className="w-full min-w-[20rem] table-fixed border-collapse">
+                              <colgroup>
+                                <col className="w-auto" />
+                                <col className="w-[5.5rem] sm:w-[6rem]" />
+                                <col className="w-[7.5rem] sm:w-[8.5rem]" />
+                                <col className="w-10" />
+                              </colgroup>
+                              <thead>
+                                <tr className="bg-emerald-50 border-y border-emerald-200">
+                                  <th className="text-left px-4 sm:px-5 py-3 text-sm font-bold text-emerald-800">Milestone</th>
+                                  <th className="text-center px-2 py-3 text-sm font-bold text-emerald-800">Share</th>
+                                  <th className="text-right px-4 sm:px-5 py-3 text-sm font-bold text-emerald-800">Amount</th>
+                                  <th className="sr-only">Remove</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {quotationPaymentTerms.map((term, i) => {
+                                  const pct = Number(term.percentage) || 0;
+                                  const amt = quotationTotals.total * pct / 100;
+                                  return (
+                                    <tr key={i} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                                      <td className="px-3 sm:px-5 py-3 align-middle">
+                                        <input
+                                          type="text"
+                                          value={term.label}
+                                          onChange={(e) => handleQuotationTermChange(i, 'label', e.target.value)}
+                                          placeholder={`Milestone ${i + 1}`}
+                                          className="w-full min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-md focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 outline-none text-sm font-medium text-slate-800"
+                                        />
+                                      </td>
+                                      <td className="px-2 py-3 align-middle">
+                                        <div className="relative">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value={term.percentage}
+                                            onChange={(e) => handleQuotationTermChange(i, 'percentage', e.target.value)}
+                                            placeholder="0"
+                                            className="w-full px-2 py-2 pr-7 bg-white border border-slate-200 rounded-md focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 outline-none text-sm font-semibold text-center tabular-nums text-slate-800"
+                                          />
+                                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                        </div>
+                                      </td>
+                                      <td className="px-3 sm:px-5 py-3 align-middle text-right">
+                                        <span className="text-sm font-semibold tabular-nums text-slate-900 whitespace-nowrap">
+                                          {quotationTotals.total > 0
+                                            ? `Rs. ${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                            : '—'}
+                                        </span>
+                                      </td>
+                                      <td className="px-1 py-3 align-middle text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => removeQuotationPaymentTerm(i)}
+                                          className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                          title="Remove milestone"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div
+                              className={`flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 text-xs font-semibold border-t border-emerald-100 ${
+                                quotationTermsTotalPct === 100
+                                  ? 'bg-emerald-50 text-emerald-800'
+                                  : quotationTermsTotalPct > 100
+                                    ? 'bg-red-50 text-red-800'
+                                    : 'bg-amber-50 text-amber-900'
+                              }`}
+                            >
+                              <span>Total allocation: {quotationTermsTotalPct}%</span>
+                              {quotationTermsTotalPct === 100 ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Balanced
+                                </span>
+                              ) : quotationTermsTotalPct > 100 ? (
+                                <span>Over by {quotationTermsTotalPct - 100}%</span>
+                              ) : (
+                                <span>{100 - quotationTermsTotalPct}% remaining</span>
+                              )}
+                              {quotationTotals.total > 0 && (
+                                <span className="w-full sm:w-auto text-right tabular-nums text-slate-800 font-bold">
+                                  Rs. {quotationTotals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={addQuotationPaymentTerm}
+                          className="flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-2 rounded-lg border border-primary-200/60 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Installment
+                        </button>
+
+                        {hasQuotationPaymentTerms && quotationPaymentTermRows.length > 0 && (
+                          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm overflow-x-auto">
+                            <p className="px-4 sm:px-5 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">PDF preview</p>
+                            <h4 className="px-4 sm:px-5 pb-3 text-sm font-bold text-emerald-950">Payment Terms</h4>
+                            <table className="w-full min-w-[18rem] table-fixed border-collapse border-t border-slate-100">
+                              <colgroup>
+                                <col />
+                                <col className="w-[5.5rem] sm:w-[6rem]" />
+                                <col className="w-[8.5rem] sm:w-[9.5rem]" />
+                              </colgroup>
+                              <thead>
+                                <tr className="bg-emerald-50 border-y border-emerald-200">
+                                  <th className="text-left px-4 sm:px-5 py-3 text-sm font-bold text-emerald-800">Milestone</th>
+                                  <th className="text-center px-2 py-3 text-sm font-bold text-emerald-800">Share</th>
+                                  <th className="text-right px-4 sm:px-5 py-3 text-sm font-bold text-emerald-800">Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white">
+                                {quotationPaymentTermRows.map((term, i) => {
+                                  const amt = quotationTotals.total * term.percentage / 100;
+                                  return (
+                                    <tr key={i} className="border-b border-slate-100 last:border-b-0">
+                                      <td className="px-4 sm:px-5 py-3.5 text-sm font-medium text-slate-800">{term.label}</td>
+                                      <td className="px-2 py-3.5 text-sm text-center tabular-nums text-slate-700">{term.percentage}%</td>
+                                      <td className="px-4 sm:px-5 py-3.5 text-sm text-right tabular-nums font-semibold text-slate-900">
+                                        Rs. {amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Notes &amp; remarks</label>
                       <p className="text-[11px] text-slate-500 leading-relaxed">
-                        Auto-fills from the <span className="font-semibold text-slate-600">quote date month</span> when empty. Presets replace
-                        the whole field — edit freely after applying.
+                        Optional. Pick a preset below or type your own terms.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -3439,15 +4155,6 @@ export default function AdminDashboard() {
                           {label}
                         </button>
                       ))}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setQuotationForm((p) => ({ ...p, notes: getQuotationMonthlyRemarks(p.quoteDate) }))
-                        }
-                        className="px-3 py-1.5 rounded-full border border-primary-200 bg-primary-50 text-xs font-semibold text-primary-800 hover:bg-primary-100 transition-colors"
-                      >
-                        Refresh monthly
-                      </button>
                       <button
                         type="button"
                         onClick={() => setQuotationForm((p) => ({ ...p, notes: '' }))}
@@ -3465,11 +4172,24 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  <button type="submit" className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 text-sm flex items-center gap-2">
-                    <Download className="w-4 h-4" />
-                    Download Quotation PDF
+                  <button
+                    type="submit"
+                    disabled={quotationSaving}
+                    className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 text-sm flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {quotationSaving ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {quotationSaving
+                      ? 'Saving…'
+                      : editingQuotationId
+                        ? 'Update, Save & Download PDF'
+                        : 'Generate, Save & Download PDF'}
                   </button>
                 </form>
+              </div>
               </div>
             )}
 
