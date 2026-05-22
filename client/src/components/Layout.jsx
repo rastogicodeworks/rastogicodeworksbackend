@@ -4,12 +4,12 @@ import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
 import CookieConsent from './CookieConsent';
 import VisitEngagementPopup from './VisitEngagementPopup';
-const STANDALONE_DASHBOARD_PREFIXES = ['/admin', '/dashboard', '/employee'];
+const STANDALONE_LAYOUT_PREFIXES = ['/admin', '/dashboard', '/employee', '/login'];
 
 export default function Layout() {
   const location = useLocation();
   const path = location.pathname.replace(/\/+$/, '') || '/';
-  const isStandalonePage = STANDALONE_DASHBOARD_PREFIXES.some(
+  const isStandalonePage = STANDALONE_LAYOUT_PREFIXES.some(
     (p) => path === p || path.startsWith(`${p}/`),
   );
 

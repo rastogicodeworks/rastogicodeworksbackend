@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { connectDb } from './config/db.js';
+import { connectDb, isDbConnected } from './config/db.js';
 import { bootstrapAdmin } from './scripts/bootstrapAdmin.js';
 import { authRouter } from './routes/auth.js';
 import { invoicesRouter } from './routes/invoices.js';
@@ -21,6 +21,7 @@ import { careersRouter } from './routes/careers.js';
 import { appSettingsRouter } from './routes/appSettings.js';
 import { siteContentPublicRouter } from './routes/siteContent.js';
 import { quotationsRouter } from './routes/quotations.js';
+import { paymentCollectionsRouter } from './routes/paymentCollections.js';
 
 dotenv.config();
 
@@ -90,13 +91,27 @@ app.use(
 );
 
 app.get('/api/health', (_, res) => {
+  const dbConfigured = !!process.env.MONGODB_URI?.trim();
   res.json({
     status: 'ok',
     message: 'Rastogi Codeworks API',
+    db: dbConfigured ? (isDbConnected() ? 'connected' : 'connecting') : 'not_configured',
     // Helps debug login: confirms server has admin env (does not expose secrets)
     adminConfigured: !!(process.env.ADMIN_EMAIL?.trim() && process.env.ADMIN_PASSWORD?.trim()),
   });
 });
+
+/** Return 503 until MongoDB is ready (when MONGODB_URI is set). */
+function requireDbReady(req, res, next) {
+  const uri = process.env.MONGODB_URI?.trim();
+  if (!uri || isDbConnected()) return next();
+  return res.status(503).json({
+    success: false,
+    message: 'Database is still connecting. Please try again in a moment.',
+  });
+}
+
+app.use('/api', requireDbReady);
 
 app.use('/api/careers', careersRouter);
 app.use('/api/auth', authRouter);
@@ -111,19 +126,26 @@ app.use('/api/announcements', announcementsRouter);
 app.use('/api/hiring', hiringRouter);
 app.use('/api/employee-tasks', employeeTasksRouter);
 app.use('/api/employees', employeesRouter);
+app.use('/api/payment-collections', paymentCollectionsRouter);
 
 app.use((err, req, res, next) => {
   console.error('[global-error]', err);
   res.status(500).json({ success: false, message: 'Unexpected server error.' });
 });
 
-connectDb()
-  .then(() => bootstrapAdmin())
-  .catch((err) => console.error('[startup]', err))
-  .finally(() => {
-    app.listen(PORT, HOST, () => {
-      const env = process.env.NODE_ENV || 'development';
-      console.log(`Server running at http://${HOST}:${PORT} [${env}]`);
-    });
-  });
+app.listen(PORT, HOST, () => {
+  const env = process.env.NODE_ENV || 'development';
+  console.log(`Server running at http://localhost:${PORT} [${env}]`);
+});
+
+async function startDatabase() {
+  try {
+    await connectDb();
+    await bootstrapAdmin();
+  } catch (err) {
+    console.error('[startup]', err?.message || err);
+  }
+}
+
+startDatabase();
 

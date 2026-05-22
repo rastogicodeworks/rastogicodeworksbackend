@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Sparkles, FolderOpen, MessageSquare, HelpCircle, Shield, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import PageCTA from '../components/PageCTA';
+import WhatsAppButton from '../components/WhatsAppButton';
 import API_BASE, {
   isProductionWithoutApi,
   PRODUCTION_API_MESSAGE,
@@ -101,14 +102,15 @@ export default function Login() {
       </header>
 
       {/* Full-page hero strip  -  sets the tone */}
-      <section className="relative pt-6 pb-8 sm:pt-28 md:pt-36 md:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-4 pb-6 sm:pt-28 md:pt-36 md:pb-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-primary-50/30" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-grid-fade pointer-events-none" />
         <div className="absolute top-0 right-0 w-[min(80vw,600px)] h-[min(80vw,600px)] bg-primary-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-[min(60vw,400px)] h-[min(60vw,400px)] bg-primary-50/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
         <div className="relative max-w-6xl mx-auto">
           <div className="text-center mb-6 md:mb-8">
-            <div className="inline-flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-4">
+            {/* Desktop only — mobile uses the sticky bar above to avoid double header */}
+            <div className="hidden sm:inline-flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-4">
               <Link to="/" className="flex-shrink-0">
                 <img
                   src="/transparent_logo.png"
@@ -121,7 +123,7 @@ export default function Login() {
                 Client portal
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-3 text-balance">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-3 text-balance">
               Sign in to your space
             </h1>
             <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto text-pretty">
@@ -285,6 +287,7 @@ export default function Login() {
         buttonText="Contact us"
         to="/contact"
       />
+      <WhatsAppButton />
     </div>
   );
 }

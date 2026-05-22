@@ -51,6 +51,9 @@ import {
   BookOpen,
   Globe,
   Save,
+  Wallet,
+  Filter,
+  X,
 } from 'lucide-react';
 import { downloadInvoicePdf } from '../utils/invoicePdf.js';
 import { downloadQuotationPdf } from '../utils/quotationPdf.js';
@@ -78,11 +81,17 @@ import DashboardNavbar from '../components/DashboardNavbar';
 import AdminDesktopTopBar from '../components/AdminDesktopTopBar';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import AdminHiringSection from '../components/AdminHiringSection';
+import AdminPaymentCollectionSection from '../components/AdminPaymentCollectionSection';
 import AdminReportsSection from '../components/AdminReportsSection';
 import AdminRevenueChart from '../components/AdminRevenueChart';
 import API_BASE from '../config/api';
 import { getAuthHeaders, clearAuthToken } from '../config/auth';
 import { services } from '../data/services';
+import {
+  getCollectedFromInvoice,
+  getOutstandingFromInvoice,
+  isInvoiceFullyCollected,
+} from '../utils/invoiceCollections.js';
 
 const emptyItem = { description: '', quantity: 1, price: 0 };
 const emptyTerm = { label: '', percentage: '', dueDate: '', status: 'due', partialAmount: '' };
@@ -92,6 +101,61 @@ const PAYMENT_TERM_STATUSES = [
   { value: 'partially_paid', label: 'Partially Paid' },
   { value: 'overdue', label: 'Overdue' },
 ];
+
+const OVERVIEW_DATE_RANGES = [
+  { value: 'all', label: 'All time' },
+  { value: 'this_month', label: 'This month' },
+  { value: 'last_month', label: 'Last month' },
+  { value: 'last_3_months', label: 'Last 3 months' },
+  { value: 'last_6_months', label: 'Last 6 months' },
+  { value: 'this_year', label: 'This year' },
+  { value: 'custom', label: 'Custom range' },
+];
+
+const OVERVIEW_STATUS_FILTERS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'partially_paid', label: 'Partial' },
+  { value: 'overdue', label: 'Overdue' },
+];
+
+function getOverviewDateBounds(preset, dateFrom, dateTo) {
+  const now = new Date();
+  const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  switch (preset) {
+    case 'this_month':
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: endOfDay(now) };
+    case 'last_month': {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
+      return { start, end };
+    }
+    case 'last_3_months':
+      return { start: new Date(now.getFullYear(), now.getMonth() - 2, 1), end: endOfDay(now) };
+    case 'last_6_months':
+      return { start: new Date(now.getFullYear(), now.getMonth() - 5, 1), end: endOfDay(now) };
+    case 'this_year':
+      return { start: new Date(now.getFullYear(), 0, 1), end: endOfDay(now) };
+    case 'custom': {
+      if (!dateFrom) return null;
+      const start = new Date(dateFrom);
+      const end = dateTo ? endOfDay(new Date(dateTo)) : endOfDay(now);
+      if (Number.isNaN(start.getTime())) return null;
+      return { start, end };
+    }
+    default:
+      return null;
+  }
+}
+
+function invoiceMatchesOverviewDate(inv, bounds) {
+  if (!bounds) return true;
+  const d = new Date(inv.invoiceDate);
+  if (Number.isNaN(d.getTime())) return false;
+  const t = d.getTime();
+  return t >= bounds.start.getTime() && t <= bounds.end.getTime();
+}
 
 const PAYMENT_PRESETS = [
   { label: '100%', terms: [{ label: 'Full Payment', percentage: 100, dueDate: '', status: 'due', partialAmount: '' }] },
@@ -133,6 +197,7 @@ export default function AdminDashboard() {
       { id: 'projects', label: 'Projects', icon: FolderKanban },
       { id: 'quotations', label: 'Quotation Generator', icon: FileText },
       { id: 'clients', label: 'Clients', icon: Users },
+      { id: 'payments', label: 'Payment Collection', icon: Wallet },
       { id: 'website', label: 'Website', icon: Globe },
       { id: 'reports', label: 'Reports', icon: BarChart2 },
       { id: 'hiring', label: 'Hiring', icon: UserPlus },
@@ -155,6 +220,12 @@ export default function AdminDashboard() {
   // Invoice management state
   const [invoices, setInvoices] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [invoicesClientFilter, setInvoicesClientFilter] = useState('all');
+  const [overviewDateRange, setOverviewDateRange] = useState('all');
+  const [overviewDateFrom, setOverviewDateFrom] = useState('');
+  const [overviewDateTo, setOverviewDateTo] = useState('');
+  const [overviewStatusFilter, setOverviewStatusFilter] = useState('all');
+  const [overviewClientFilter, setOverviewClientFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [downloadingInvId, setDownloadingInvId] = useState(null);
@@ -885,30 +956,76 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredInvoices = useMemo(
-    () =>
-      statusFilter === 'all'
-        ? invoices
-        : invoices.filter((inv) => inv.status === statusFilter),
-    [invoices, statusFilter],
+  const filteredInvoices = useMemo(() => {
+    let list = invoices;
+    if (statusFilter !== 'all') {
+      list = list.filter((inv) => inv.status === statusFilter);
+    }
+    if (invoicesClientFilter !== 'all') {
+      list = list.filter((inv) => inv.clientName === invoicesClientFilter);
+    }
+    return list;
+  }, [invoices, statusFilter, invoicesClientFilter]);
+
+  const overviewClientOptions = useMemo(() => {
+    const names = new Set();
+    invoices.forEach((inv) => {
+      const n = inv.clientName?.trim();
+      if (n) names.add(n);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [invoices]);
+
+  const overviewDateBounds = useMemo(
+    () => getOverviewDateBounds(overviewDateRange, overviewDateFrom, overviewDateTo),
+    [overviewDateRange, overviewDateFrom, overviewDateTo],
   );
 
+  const overviewFilteredInvoices = useMemo(() => {
+    return invoices.filter((inv) => {
+      if (!invoiceMatchesOverviewDate(inv, overviewDateBounds)) return false;
+      if (overviewStatusFilter !== 'all' && inv.status !== overviewStatusFilter) return false;
+      if (overviewClientFilter !== 'all' && inv.clientName !== overviewClientFilter) return false;
+      return true;
+    });
+  }, [invoices, overviewDateBounds, overviewStatusFilter, overviewClientFilter]);
+
+  const overviewFiltersActive = useMemo(
+    () =>
+      overviewDateRange !== 'all' ||
+      overviewStatusFilter !== 'all' ||
+      overviewClientFilter !== 'all',
+    [overviewDateRange, overviewStatusFilter, overviewClientFilter],
+  );
+
+  const resetOverviewFilters = () => {
+    setOverviewDateRange('all');
+    setOverviewDateFrom('');
+    setOverviewDateTo('');
+    setOverviewStatusFilter('all');
+    setOverviewClientFilter('all');
+  };
+
   const overviewStats = useMemo(() => {
-    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-    const paidRevenue = invoices
-      .filter((inv) => inv.status === 'paid')
-      .reduce((sum, inv) => sum + (inv.total || 0), 0);
-    const pendingRevenue = totalRevenue - paidRevenue;
-    const unpaidCount = invoices.filter((inv) => inv.status !== 'paid').length;
-    const paidCount = invoices.filter((inv) => inv.status === 'paid').length;
-    const overdueCount = invoices.filter((inv) => inv.status === 'overdue').length;
+    const totalRevenue = overviewFilteredInvoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    const paidRevenue = overviewFilteredInvoices.reduce((sum, inv) => sum + getCollectedFromInvoice(inv), 0);
+    const pendingRevenue = overviewFilteredInvoices.reduce((sum, inv) => sum + getOutstandingFromInvoice(inv), 0);
+    const paidCount = overviewFilteredInvoices.filter((inv) => isInvoiceFullyCollected(inv)).length;
+    const partialCount = overviewFilteredInvoices.filter((inv) => {
+      const collected = getCollectedFromInvoice(inv);
+      const total = Number(inv.total) || 0;
+      return collected > 0.01 && collected < total - 0.01;
+    }).length;
+    const unpaidCount = overviewFilteredInvoices.filter((inv) => getCollectedFromInvoice(inv) <= 0.01).length;
+    const openCount = overviewFilteredInvoices.filter((inv) => getOutstandingFromInvoice(inv) > 0.01).length;
+    const overdueCount = overviewFilteredInvoices.filter((inv) => inv.status === 'overdue').length;
     const pendingPercentage = totalRevenue > 0 ? Math.round((pendingRevenue / totalRevenue) * 100) : 0;
-    const averageInvoice = invoices.length > 0 ? totalRevenue / invoices.length : 0;
+    const averageInvoice = overviewFilteredInvoices.length > 0 ? totalRevenue / overviewFilteredInvoices.length : 0;
     const collectionRate = totalRevenue > 0 ? Math.round((paidRevenue / totalRevenue) * 100) : 0;
 
     // This month
     const now = new Date();
-    const thisMonthInvoices = invoices.filter((inv) => {
+    const thisMonthInvoices = overviewFilteredInvoices.filter((inv) => {
       const d = new Date(inv.invoiceDate);
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     });
@@ -917,7 +1034,7 @@ export default function AdminDashboard() {
 
     // Last month for comparison
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthRevenue = invoices
+    const lastMonthRevenue = overviewFilteredInvoices
       .filter((inv) => {
         const d = new Date(inv.invoiceDate);
         return d.getFullYear() === lastMonthDate.getFullYear() && d.getMonth() === lastMonthDate.getMonth();
@@ -927,13 +1044,21 @@ export default function AdminDashboard() {
       ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
       : null;
 
-    // Top clients by total billed
+    // Top clients: sum of each invoice's line-item total (not project budget / payment collection)
     const clientMap = new Map();
-    invoices.forEach((inv) => {
-      const key = inv.clientName || 'Unknown';
-      const cur = clientMap.get(key) || { name: key, total: 0, paid: 0, count: 0 };
-      cur.total += inv.total || 0;
-      if (inv.status === 'paid') cur.paid += inv.total || 0;
+    overviewFilteredInvoices.forEach((inv) => {
+      const email = (inv.clientEmail || '').trim().toLowerCase();
+      const key = email ? `email:${email}` : `name:${(inv.clientName || 'Unknown').trim().toLowerCase()}`;
+      const displayName = (inv.clientName || 'Unknown').trim() || 'Unknown';
+      const cur = clientMap.get(key) || {
+        name: displayName,
+        filterName: displayName,
+        total: 0,
+        paid: 0,
+        count: 0,
+      };
+      cur.total += Number(inv.total) || 0;
+      cur.paid += getCollectedFromInvoice(inv);
       cur.count += 1;
       clientMap.set(key, cur);
     });
@@ -946,7 +1071,7 @@ export default function AdminDashboard() {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
-      const rev = invoices
+      const rev = overviewFilteredInvoices
         .filter((inv) => {
           const id = new Date(inv.invoiceDate);
           return id.getFullYear() === d.getFullYear() && id.getMonth() === d.getMonth();
@@ -957,16 +1082,18 @@ export default function AdminDashboard() {
     const maxMonthlyRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
 
     // Overdue revenue
-    const overdueRevenue = invoices
+    const overdueRevenue = overviewFilteredInvoices
       .filter((inv) => inv.status === 'overdue')
-      .reduce((s, inv) => s + (inv.total || 0), 0);
+      .reduce((s, inv) => s + getOutstandingFromInvoice(inv), 0);
 
     return {
-      totalInvoices: invoices.length,
+      totalInvoices: overviewFilteredInvoices.length,
       totalRevenue,
       paidRevenue,
       pendingRevenue,
       unpaidCount,
+      partialCount,
+      openCount,
       paidCount,
       overdueCount,
       overdueRevenue,
@@ -985,10 +1112,10 @@ export default function AdminDashboard() {
         const today = new Date();
         const buckets = { '0-30d': 0, '31-60d': 0, '61-90d': 0, '90d+': 0 };
         const amts = { '0-30d': 0, '31-60d': 0, '61-90d': 0, '90d+': 0 };
-        invoices.filter((inv) => inv.status !== 'paid' && inv.dueDate).forEach((inv) => {
+        overviewFilteredInvoices.filter((inv) => !isInvoiceFullyCollected(inv) && inv.dueDate).forEach((inv) => {
           const daysPast = Math.floor((today - new Date(inv.dueDate)) / 86400000);
           if (daysPast < 0) return;
-          const out = Number(inv.balanceDue ?? inv.total) || 0;
+          const out = getOutstandingFromInvoice(inv);
           if (out <= 0) return;
           const key = daysPast <= 30 ? '0-30d' : daysPast <= 60 ? '31-60d' : daysPast <= 90 ? '61-90d' : '90d+';
           buckets[key]++;
@@ -996,9 +1123,9 @@ export default function AdminDashboard() {
         });
         return Object.entries(buckets).map(([range, count]) => ({ range, count, amount: amts[range] }));
       })(),
-      disputedCount: invoices.filter((inv) => inv.dispute?.flagged).length,
+      disputedCount: overviewFilteredInvoices.filter((inv) => inv.dispute?.flagged).length,
     };
-  }, [invoices]);
+  }, [overviewFilteredInvoices]);
 
   const handleLogout = () => {
     clearAuthToken();
@@ -1557,6 +1684,7 @@ export default function AdminDashboard() {
                   {activeSection === 'projects' && 'Projects'}
                   {activeSection === 'quotations' && 'Quotation Generator'}
                   {activeSection === 'clients' && 'Clients'}
+                  {activeSection === 'payments' && 'Payment Collection'}
                   {activeSection === 'website' && 'Website'}
                   {activeSection === 'reports' && 'Reports'}
                   {activeSection === 'hiring' && 'Hiring & team'}
@@ -1569,6 +1697,7 @@ export default function AdminDashboard() {
                   {activeSection === 'projects' && 'Create and manage projects assigned to your clients.'}
                   {activeSection === 'quotations' && 'Create and download client quotations with line items and terms.'}
                   {activeSection === 'clients' && 'Manage your client relationships and project details.'}
+                  {activeSection === 'payments' && 'Track expected, partial, and remaining payments per client with due dates.'}
                   {activeSection === 'website' && 'Update homepage copy and manage images served from your API (live site reads public content).'}
                   {activeSection === 'reports' && 'Export a consolidated business snapshot: revenue, invoices, hiring, and tasks.'}
                   {activeSection === 'hiring' && 'Post roles, track candidates, invite employees, and assign internal tasks.'}
@@ -1640,6 +1769,107 @@ export default function AdminDashboard() {
             {activeSection === 'overview' && (
               <div className="space-y-6 animate-fade-in-up">
 
+                {/* Dashboard filters */}
+                <div className="admin-card-glass rounded-2xl border border-primary-200/40 p-4 sm:p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-5 h-5 text-primary-600 shrink-0" />
+                      <div>
+                        <h2 className="text-sm font-bold text-primary-950">Filters</h2>
+                        <p className="text-xs text-primary-600">
+                          {overviewFiltersActive
+                            ? `Showing ${overviewFilteredInvoices.length} of ${invoices.length} invoices`
+                            : 'All invoices included in dashboard metrics'}
+                        </p>
+                      </div>
+                    </div>
+                    {overviewFiltersActive && (
+                      <button
+                        type="button"
+                        onClick={resetOverviewFilters}
+                        className="inline-flex items-center gap-1.5 self-start sm:self-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1.5">
+                        Date range
+                      </label>
+                      <select
+                        value={overviewDateRange}
+                        onChange={(e) => setOverviewDateRange(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/15 outline-none"
+                      >
+                        {OVERVIEW_DATE_RANGES.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1.5">
+                        Status
+                      </label>
+                      <select
+                        value={overviewStatusFilter}
+                        onChange={(e) => setOverviewStatusFilter(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/15 outline-none"
+                      >
+                        {OVERVIEW_STATUS_FILTERS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1.5">
+                        Client
+                      </label>
+                      <select
+                        value={overviewClientFilter}
+                        onChange={(e) => setOverviewClientFilter(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/15 outline-none"
+                      >
+                        <option value="all">All clients</option>
+                        {overviewClientOptions.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={overviewDateRange === 'custom' ? '' : 'opacity-60 pointer-events-none'}>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1.5">
+                        Custom dates
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={overviewDateFrom}
+                          onChange={(e) => setOverviewDateFrom(e.target.value)}
+                          disabled={overviewDateRange !== 'custom'}
+                          className="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm disabled:bg-slate-50"
+                          aria-label="From date"
+                        />
+                        <input
+                          type="date"
+                          value={overviewDateTo}
+                          onChange={(e) => setOverviewDateTo(e.target.value)}
+                          disabled={overviewDateRange !== 'custom'}
+                          className="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm disabled:bg-slate-50"
+                          aria-label="To date"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* ── Row 1: 4 primary stat cards ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
                   <StatCard
@@ -1650,16 +1880,28 @@ export default function AdminDashboard() {
                   />
                   <StatCard
                     icon={CheckCircle}
-                    label="Paid Revenue"
+                    label="Collected"
                     value={loading ? '-' : `Rs. ${overviewStats.paidRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    helper={loading ? 'Loading…' : `${overviewStats.paidCount} cleared`}
+                    helper={
+                      loading
+                        ? 'Loading…'
+                        : overviewStats.partialCount > 0
+                          ? `${overviewStats.paidCount} fully paid · ${overviewStats.partialCount} partial`
+                          : `${overviewStats.paidCount} fully collected`
+                    }
                     tone="success"
                   />
                   <StatCard
                     icon={Clock}
-                    label="Pending Amount"
+                    label="Remaining"
                     value={loading ? '-' : `Rs. ${overviewStats.pendingRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    helper={loading ? 'Loading…' : `${overviewStats.unpaidCount} awaiting payment`}
+                    helper={
+                      loading
+                        ? 'Loading…'
+                        : overviewStats.openCount > 0
+                          ? `${overviewStats.openCount} invoice${overviewStats.openCount !== 1 ? 's' : ''} with balance`
+                          : 'All collected'
+                    }
                     tone="warning"
                   />
                   <StatCard
@@ -1780,13 +2022,28 @@ export default function AdminDashboard() {
                         <div className="flex-1 flex items-center justify-center py-12">
                           <div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
                         </div>
-                      ) : invoices.length === 0 ? (
+                      ) : overviewFilteredInvoices.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                           <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                             <FilePlus className="w-7 h-7 text-primary-500" />
                           </div>
-                          <p className="font-semibold text-primary-950 text-lg">No invoices yet</p>
-                          <p className="text-primary-600/80 text-sm max-w-xs mt-1 mb-5">Create your first invoice to see real data here.</p>
+                          <p className="font-semibold text-primary-950 text-lg">
+                            {invoices.length === 0 ? 'No invoices yet' : 'No invoices match filters'}
+                          </p>
+                          <p className="text-primary-600/80 text-sm max-w-xs mt-1 mb-5">
+                            {invoices.length === 0
+                              ? 'Create your first invoice to see real data here.'
+                              : 'Try changing date range, status, or client filters.'}
+                          </p>
+                          {overviewFiltersActive && invoices.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={resetOverviewFilters}
+                              className="mb-3 text-sm font-semibold text-primary-600 hover:underline"
+                            >
+                              Clear filters
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setActiveSection('create')}
@@ -1799,7 +2056,7 @@ export default function AdminDashboard() {
                         <>
                           <div className="md:hidden overflow-y-auto admin-scroll px-4 pb-4">
                             <ul className="space-y-3">
-                              {invoices.slice(0, 5).map((inv) => (
+                              {overviewFilteredInvoices.slice(0, 5).map((inv) => (
                                 <li key={inv._id} className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1831,7 +2088,7 @@ export default function AdminDashboard() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-primary-100/50">
-                                {invoices.slice(0, 5).map((inv) => (
+                                {overviewFilteredInvoices.slice(0, 5).map((inv) => (
                                   <tr key={inv._id} className="hover:bg-primary-50/30 transition-colors">
                                     <td className="px-4 sm:px-6 py-2 sm:py-3">
                                       <div className="flex items-center gap-3">
@@ -1982,13 +2239,18 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Top Clients */}
+                  {/* Top Clients — totals from saved invoices only */}
                   <div className="admin-card-glass rounded-2xl overflow-hidden">
                     <div className="px-5 py-4 border-b border-primary-100 flex items-center justify-between gap-2">
-                      <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
-                        <Users className="w-5 h-5 text-primary-500" />
-                        Top Clients
-                      </h2>
+                      <div>
+                        <h2 className="text-base font-bold text-primary-950 flex items-center gap-2">
+                          <Users className="w-5 h-5 text-primary-500" />
+                          Top Clients
+                        </h2>
+                        <p className="text-[10px] text-primary-500 mt-0.5 leading-snug">
+                          Sum of invoice line totals per client (not project cost or payment collection)
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setActiveSection('clients')}
@@ -2016,23 +2278,48 @@ export default function AdminDashboard() {
                         <ul className="space-y-3">
                           {overviewStats.topClients.map((client, i) => {
                             const shareWidth = overviewStats.totalRevenue > 0 ? (client.total / overviewStats.totalRevenue) * 100 : 0;
+                            const amountLabel =
+                              client.total >= 100000
+                                ? `${(client.total / 100000).toFixed(1)}L`
+                                : client.total >= 1000
+                                  ? `${(client.total / 1000).toFixed(1)}K`
+                                  : client.total.toLocaleString('en-IN', { maximumFractionDigits: 0 });
                             return (
-                              <li key={client.name} className="flex items-center gap-3 group">
-                                <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs shrink-0">
-                                  {i + 1}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-1 mb-1">
-                                    <p className="font-semibold text-primary-950 text-sm truncate">{client.name}</p>
-                                    <p className="text-xs font-bold text-primary-700 tabular-nums shrink-0">
-                                      Rs. {client.total >= 100000 ? `${(client.total / 100000).toFixed(1)}L` : client.total >= 1000 ? `${(client.total / 1000).toFixed(1)}K` : client.total.toFixed(0)}
+                              <li key={`${client.name}-${i}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const name = client.filterName || client.name;
+                                    setOverviewClientFilter(name);
+                                    setInvoicesClientFilter(name);
+                                    setActiveSection('invoices');
+                                    setStatusFilter('all');
+                                  }}
+                                  className="flex w-full items-center gap-3 group text-left rounded-xl p-2 -mx-2 hover:bg-primary-50/80 transition-colors"
+                                >
+                                  <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {i + 1}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                      <p className="font-semibold text-primary-950 text-sm truncate">{client.name}</p>
+                                      <p className="text-xs font-bold text-primary-700 tabular-nums shrink-0" title="Total invoiced">
+                                        Rs. {amountLabel}
+                                      </p>
+                                    </div>
+                                    <div className="h-1 bg-primary-100 rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary-500 rounded-full" style={{ width: `${shareWidth}%` }} />
+                                    </div>
+                                    <p className="text-[10px] text-primary-400 mt-0.5">
+                                      {client.count} invoice{client.count !== 1 ? 's' : ''} saved
+                                      {client.paid > 0 && (
+                                        <> · Rs. {client.paid.toLocaleString('en-IN', { maximumFractionDigits: 0 })} paid</>
+                                      )}
+                                      {' · '}
+                                      {Math.round(shareWidth)}% of filtered revenue
                                     </p>
                                   </div>
-                                  <div className="h-1 bg-primary-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary-500 rounded-full" style={{ width: `${shareWidth}%` }} />
-                                  </div>
-                                  <p className="text-[10px] text-primary-400 mt-0.5">{client.count} invoice{client.count !== 1 ? 's' : ''} · {Math.round(shareWidth)}% of total</p>
-                                </div>
+                                </button>
                               </li>
                             );
                           })}
@@ -2894,6 +3181,21 @@ export default function AdminDashboard() {
             {/* Invoices List Section */}
             {activeSection === 'invoices' && (
               <div className="admin-card-glass rounded-2xl overflow-hidden animate-fade-in-up">
+                {invoicesClientFilter !== 'all' && (
+                  <div className="px-4 sm:px-6 py-3 border-b border-primary-100 bg-primary-50/60 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-primary-700">
+                      Showing invoices for <strong className="text-primary-950">{invoicesClientFilter}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setInvoicesClientFilter('all')}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-white px-2.5 py-1 text-xs font-semibold text-primary-800 hover:bg-primary-50"
+                    >
+                      <X className="w-3 h-3" />
+                      Clear client filter
+                    </button>
+                  </div>
+                )}
                 {filteredInvoices.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
                     <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-6">
@@ -4195,6 +4497,9 @@ export default function AdminDashboard() {
 
             {activeSection === 'reports' && <AdminReportsSection onError={(msg) => setError(msg || '')} />}
             {activeSection === 'hiring' && <AdminHiringSection onError={(msg) => setError(msg || '')} />}
+            {activeSection === 'payments' && (
+              <AdminPaymentCollectionSection onError={(msg) => setError(msg || '')} />
+            )}
 
             {activeSection === 'website' && (
               <div className="animate-fade-in-up w-full max-w-7xl mx-auto space-y-6">

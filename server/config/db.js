@@ -5,6 +5,11 @@ import mongoose from 'mongoose';
 // which is the cause of "querySrv ECONNREFUSED" on Windows when using mongodb+srv://
 dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
 
+/** True when Mongoose has an active connection (readyState 1). */
+export function isDbConnected() {
+  return mongoose.connection.readyState === 1;
+}
+
 export async function connectDb() {
   const raw = process.env.MONGODB_URI;
   const uri = typeof raw === 'string' ? raw.trim() : '';
@@ -24,17 +29,21 @@ export async function connectDb() {
     throw new Error('Invalid MONGODB_URI scheme.');
   }
 
+  const timeoutMs = isProduction ? 20000 : 5000;
   const connectOptions = {
-    serverSelectionTimeoutMS: 20000,
-    connectTimeoutMS: 20000,
+    serverSelectionTimeoutMS: timeoutMs,
+    connectTimeoutMS: timeoutMs,
     socketTimeoutMS: 30000,
     // Force IPv4 – fixes most local DNS/SRV resolution failures on Windows/Mac
     family: 4,
   };
 
+  const target = uri.startsWith('mongodb+srv://') ? 'MongoDB Atlas' : 'MongoDB';
+  console.log(`[DB] Connecting to ${target}…`);
+
   try {
     await mongoose.connect(uri, connectOptions);
-    console.log('[DB] Connected to MongoDB Atlas');
+    console.log(`[DB] Connected to ${target}`);
   } catch (err) {
     console.error('[DB] MongoDB connection error:', err.message);
     console.error('[DB] Checklist:');
