@@ -179,6 +179,24 @@ function CountUp({ value, duration = 1600 }) {
 const DEFAULT_SEO_DESCRIPTION =
   'Rastogi Codeworks - Best software development & web development across India. Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata and all states & cities. Custom web apps, mobile apps, cloud & digital solutions. Where Code Meets Experience.';
 
+const DEFAULT_HERO_SUBTEXT =
+  'Building powerful software, AI workflows, and scalable systems for ambitious businesses.';
+
+/** CMS may still store the previous hero copy — use the new default instead. */
+function resolveHeroHeadline(raw) {
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  if (!text) return '';
+  if (/build\s+faster|automate\s+smarter|scale\s+better/i.test(text)) return '';
+  return text;
+}
+
+function resolveHeroSubtext(raw) {
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  if (!text) return '';
+  if (/custom\s+saas\s+platforms|enterprise\s+dashboards.*growing\s+businesses/i.test(text)) return '';
+  return text;
+}
+
 export default function Home() {
   const [cmsHome, setCmsHome] = useState(null);
 
@@ -223,9 +241,9 @@ export default function Home() {
   const heroBgSrc =
     typeof sc.heroBackgroundImage === 'string' && sc.heroBackgroundImage.trim()
       ? `${API_BASE}${sc.heroBackgroundImage.trim().startsWith('/') ? '' : '/'}${sc.heroBackgroundImage.trim()}`
-      : '/herosection.png';
-  const cmsHeadline = typeof sc.heroHeadline === 'string' && sc.heroHeadline.trim();
-  const cmsSubtext = typeof sc.heroSubtext === 'string' && sc.heroSubtext.trim();
+      : '/herosection.jpg';
+  const cmsHeadline = resolveHeroHeadline(sc.heroHeadline);
+  const cmsSubtext = resolveHeroSubtext(sc.heroSubtext);
   const cmsTrustLine = typeof sc.heroTrustLine === 'string' && sc.heroTrustLine.trim();
 
   return (
@@ -256,18 +274,19 @@ export default function Home() {
 
         <div className="relative z-10 mx-auto w-full max-w-3xl px-5 sm:px-6 lg:max-w-4xl lg:px-8">
           <div className="flex flex-col items-center pb-24 text-center max-sm:pt-[max(9.25rem,calc(7rem+env(safe-area-inset-top,0px)))] max-sm:pb-28 sm:pt-36 sm:pb-24 md:pt-40 md:pb-28 lg:pt-44 lg:pb-28">
-            <h1 className="animate-fade-in-up w-full max-w-[24rem] text-balance text-[2rem] font-bold leading-[1.2] tracking-[-0.02em] text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] min-[400px]:text-[2.125rem] min-[420px]:text-[2.25rem] sm:max-w-3xl sm:text-4xl sm:leading-[1.14] sm:tracking-tight md:text-5xl md:leading-[1.1] lg:max-w-4xl lg:text-6xl lg:leading-[1.06]">
+            <h1 className="animate-fade-in-up w-full max-w-full text-[1.875rem] font-bold leading-[1.18] tracking-[-0.02em] text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.55)] min-[400px]:text-[2.125rem] min-[420px]:text-[2.25rem] sm:max-w-3xl sm:text-4xl sm:leading-[1.14] sm:tracking-tight md:text-5xl md:leading-[1.1] lg:max-w-4xl lg:text-6xl lg:leading-[1.06]">
               {cmsHeadline ? (
                 <span className="whitespace-pre-line text-white">{cmsHeadline}</span>
               ) : (
                 <>
-                  <span className="text-white">Build </span>
-                  <span className={heroHeadlineAccent}>Faster.</span>
-                  <span className="text-white"> Automate </span>
-                  <span className={heroHeadlineAccent}>Smarter.</span>{' '}
-                  <br className="md:hidden" aria-hidden />
-                  <span className="text-white">Scale </span>
-                  <span className={heroHeadlineAccent}>Better.</span>
+                  <span className="block sm:inline">
+                    <span className="text-white">Where </span>
+                    <span className={heroHeadlineAccent}>Deep Tech</span>
+                    <span className="text-white"> Meets</span>
+                  </span>{' '}
+                  <span className="block sm:inline">
+                    <span className={heroHeadlineAccent}>Endless Innovation.</span>
+                  </span>
                 </>
               )}
             </h1>
@@ -276,8 +295,7 @@ export default function Home() {
               className="animate-fade-in-up mt-5 max-w-[21rem] text-pretty text-[0.9375rem] leading-relaxed text-white/78 sm:mt-6 sm:max-w-2xl sm:text-[1.0625rem] sm:leading-relaxed"
               style={{ animationDelay: '140ms' }}
             >
-              {cmsSubtext ||
-                'Custom SaaS platforms, enterprise dashboards, mobile apps, and AI workflows designed for growing businesses.'}
+              {cmsSubtext || DEFAULT_HERO_SUBTEXT}
             </p>
 
             {/* Trust facts — single line on mobile; glass pill from sm */}

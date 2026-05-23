@@ -4540,7 +4540,7 @@ export default function AdminDashboard() {
                             value={appSettings.siteContent?.heroHeadline || ''}
                             onChange={(e) => updateSiteContentField('heroHeadline', e.target.value)}
                             rows={4}
-                            placeholder="Plain text or multiple lines. When set, replaces the default animated headline."
+                            placeholder="Where Deep Tech Meets Endless Innovation. — leave empty to use the default styled headline on the site."
                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm resize-y min-h-[6rem]"
                           />
                         </div>

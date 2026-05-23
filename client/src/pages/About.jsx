@@ -60,15 +60,18 @@ export default function About() {
             
             <div className="space-y-8">
               <h2 className="text-3xl md:text-5xl font-bold text-primary-950">
-                Driven by <span className="text-primary-600">Passion</span>, <br />
-                Defined by <span className="text-primary-600">Quality</span>.
+                Where <span className="text-primary-600">Technology</span> Meets{' '}
+                <span className="text-primary-600">Business Growth</span>.
               </h2>
               <div className="space-y-6 text-lg text-slate-600 leading-relaxed">
                 <p>
-                  Rastogi Codeworks designs and builds custom SaaS platforms, enterprise dashboards, mobile apps, and AI workflows for teams that are outgrowing spreadsheets and one-size-fits-all tools. From greenfield products to serious internal systems, we turn complex requirements into clear, dependable software—so you ship faster, automate smarter, and give your users experiences that convert.
+                  At Rastogi Codeworks, we build powerful software solutions that simplify operations, automate processes, and help businesses scale confidently.
                 </p>
                 <p>
-                  We work as an extension of your team: shared goals, realistic timelines, and trade-offs explained in plain language. That partnership—modern architecture, security-conscious delivery, and direct communication—is how we deliver software that performs in production and supports long-term growth.
+                  From custom platforms and AI workflows to mobile apps and enterprise systems, we combine modern technology with strategic thinking to create solutions that are fast, reliable, and built to perform.
+                </p>
+                <p>
+                  Our approach is simple: clean communication, smart execution, and technology designed around real business needs.
                 </p>
               </div>
               
